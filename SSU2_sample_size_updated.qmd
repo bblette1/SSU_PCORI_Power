@@ -1,0 +1,563 @@
+---
+title: "SSU-2 Power Calculations"
+format: html
+editor: visual
+---
+
+## Summary
+
+This document performs power and sample size calculations for the SSU-2 trial. The primary outcome is 30-day DAOOH to be compared across arms with a Mann-Whitney U Test. The secondary outcome is 90-day DAOOH assessed similarly but using a non-inferiority framework. Power is assessed using simulations informed by prior data. Power to assess heterogeneity of treatment effect for the primary outcome was also assessed. From these results, a final proposed sample size of n=1250 was justified.
+
+## Gather Info from SSU-1 Data
+
+First will load in libraries and SSU-1 data.
+
+```{r}
+rm(list = ls())
+
+# Load libraries and define helper functions
+library(lme4)
+library(lmerTest)
+library(geepack)
+library(ggplot2)
+library(ordinal)
+library(clusrank)
+rnorm2 <- function(n, mean, sd) { mean+sd*scale(rnorm(n)) }
+
+# Data processing
+dat <- read.csv("/Users/bryanblette/OneDrive_VUMC/Grants/SSU-2/SSU study data.csv")
+dat$daoohr30 <- as.numeric(dat$daoohr30)
+dat$daoohr90 <- as.numeric(dat$daoohr90)
+dat$site <- as.factor(dat$site)
+
+# For reproducibility without data, summary statistics put in comments
+# Estimate proportion deceased before 30 and 90 days
+mort30 <- mean(dat$daoohr30[!is.na(dat$daoohr30)] == 0) # 0.0109
+mort90 <- mean(dat$daoohr90[!is.na(dat$daoohr90)] == 0) # 0.0116
+
+# Model primary outcome from SSU-1 data using Gaussian family
+ssu1_mod1 <- lmer(daoohr30 ~ as.factor(treatgroup) + (1 | site),
+                 data = dat[!is.na(dat$daoohr30), ])
+model_intercept1 <- summary(ssu1_mod1)$coefficients[1, 1] # 23.82
+sd_random1 <- sqrt(summary(ssu1_mod1)[[13]][1]$site[1]) # 1.683
+sd_residual1 <- c(summary(ssu1_mod1)[[11]]) # 5.343
+
+ssu1_mod2 <- lmer(daoohr90 ~ as.factor(treatgroup) + (1 | site),
+                  data = dat[!is.na(dat$daoohr90), ])
+model_intercept2 <- summary(ssu1_mod2)$coefficients[1, 1] # 78.46
+sd_random2 <- sqrt(summary(ssu1_mod2)[[13]][1]$site[1]) # 2.483
+sd_residual2 <- c(summary(ssu1_mod2)[[11]]) # 12.43
+```
+We considered two simulation procedures. In the first approach, data were simulated by sampling with replacement and a small amount of random noise from the prior trial’s hospitalization arm (and then shifting according to assumed treatment effect to simulate an SSU arm). However, if a sampled value was 0 (indicating death prior to 30 days) no treatment effect was assumed for that individual. The first approach is not reproducible for readers without the data, so we constructed a second approach that is likely less realistic but only relies on summary statistics. In the second approach, data were simulated using a mixture model, where probability of death was simulated according to probabilities observed in our prior trial, and individuals expected to survive had DAOOH values simulated from a Gaussian mixed-effects model (with parameters including random intercept variance corresponding to ICC estimated from the prior trial). Both simulation methods required truncating values that extend beyond 30 or 90 days as needed and assumed 10% lost to follow-up. They both also leveraged a function to find a treatment effect parameter that aligned with the desired difference on the difference scale (after accounting for death and value truncation). The functions are given here:
+
+```{r}
+# Function to find beta coefficient for linear model
+# (outcome is truncated when simulating from linear, shifting trt effect)
+find_beta <- function(num_sites, trt_effect) {
+  
+  n <- 5e4
+  prop_by_site <- rnorm2(num_sites, 1/num_sites, 0.33/num_sites)[1:num_sites, 1]
+  site <- rep(1:num_sites, round(prop_by_site*n))
+  if (length(site) < n) {
+    site <- c(site, rep(num_sites, n - length(site)))
+  } else if (length(site) > n) {
+    site <- site[-(1:(length(site) - n))]
+  }
+  trt <- rbinom(n, 1, 0.5)
+  df <- data.frame(site, trt)
+
+  alpha0 <- rnorm(num_sites, 0, sd_random1)
+  beta_list <- seq(0.5, 1.5, by = 0.04)*trt_effect
+  effect_sizes <- rep(NA, length(beta_list))
+  for (i in 1:length(beta_list)) {
+    df$out <- model_intercept1 + beta_list[i]*df$trt +
+      rep(alpha0, table(df$site)) + rnorm(n, 0, sd_residual1)
+    df$out[df$out > 30] <- 30
+    outmod <- lmer(out ~ trt + (1 | site), data = df)
+    effect_sizes[i] <- summary(outmod)$coefficients[2, 1]
+  }
+  
+  return(beta_list[which.min(abs(effect_sizes - trt_effect))])
+  
+}
+
+
+# Function to find beta coefficient for linear model (for 90 day outcome)
+# (outcome is truncated when simulating from linear, shifting trt effect)
+find_beta2 <- function(num_sites, trt_effect) {
+  
+  n <- 5e4
+  prop_by_site <- rnorm2(num_sites, 1/num_sites, 0.33/num_sites)[1:num_sites, 1]
+  site <- rep(1:num_sites, round(prop_by_site*n))
+  if (length(site) < n) {
+    site <- c(site, rep(num_sites, n - length(site)))
+  } else if (length(site) > n) {
+    site <- site[-(1:(length(site) - n))]
+  }
+  trt <- rbinom(n, 1, 0.5)
+  df <- data.frame(site, trt)
+
+  alpha0 <- rnorm(num_sites, 0, sd_random2)
+  beta_list <- seq(0.5, 1.5, by = 0.04)*trt_effect
+  effect_sizes <- rep(NA, length(beta_list))
+  for (i in 1:length(beta_list)) {
+    df$out <- model_intercept2 + beta_list[i]*df$trt -
+      rep(alpha0, table(df$site)) + rnorm(n, 0, sd_residual2)
+    df$out[df$out > 90] <- 90
+    outmod <- lmer(out ~ trt + (1 | site), data = df)
+    effect_sizes[i] <- summary(outmod)$coefficients[2, 1]
+  }
+  
+  return(beta_list[which.min(abs(effect_sizes - trt_effect))])
+  
+}
+
+# Function to find appropriate (30 day) shift when sampling with replacement
+# to match a desired treatment effect (accounting for boundaries)
+find_gamma <- function(num_sites, trt_effect) {
+  
+  n <- 5e4
+  prop_by_site <- rnorm2(num_sites, 1/num_sites, 0.33/num_sites)[1:num_sites, 1]
+  site <- rep(1:num_sites, round(prop_by_site*n))
+  if (length(site) < n) {
+    site <- c(site, rep(num_sites, n - length(site)))
+  } else if (length(site) > n) {
+    site <- site[-(1:(length(site) - n))]
+  }
+  trt <- rbinom(n, 1, 0.5)
+  df <- data.frame(site, trt)
+
+  gamma_list <- seq(0.5, 1.5, by = 0.02)*trt_effect
+  effect_sizes <- rep(NA, length(gamma_list))
+  
+  for (i in 1:length(gamma_list)) {
+    df$out <- sample(dat$daoohr30[dat$treatgroup == "Hospitalization" &
+                                    !is.na(dat$daoohr30)],
+                     n, replace = TRUE)
+    df$out <- df$out + gamma_list[i]*df$trt*(df$out > 0) + rnorm(n, 0, 0.1)
+    df$out[df$out > 30] <- 30
+    effect_sizes[i] <- mean(df$out[df$trt == 1]) - mean(df$out[df$trt == 0])
+  }
+  
+  #plot(gamma_list*trt_effect, effect_sizes)
+  return(gamma_list[which.min(abs(effect_sizes - trt_effect))])
+  
+}
+
+# Function to find appropriate (90 day) shift when sampling with replacement
+# to match a desired treatment effect (accounting for boundaries)
+find_gamma2 <- function(num_sites, trt_effect) {
+  
+  n <- 5e4
+  prop_by_site <- rnorm2(num_sites, 1/num_sites, 0.33/num_sites)[1:num_sites, 1]
+  site <- rep(1:num_sites, round(prop_by_site*n))
+  if (length(site) < n) {
+    site <- c(site, rep(num_sites, n - length(site)))
+  } else if (length(site) > n) {
+    site <- site[-(1:(length(site) - n))]
+  }
+  trt <- rbinom(n, 1, 0.5)
+  df <- data.frame(site, trt)
+
+  gamma_list <- seq(0.5, 1.5, by = 0.04)*trt_effect
+  effect_sizes <- rep(NA, length(gamma_list))
+  
+  for (i in 1:length(gamma_list)) {
+    df$out <- sample(dat$daoohr90[dat$treatgroup == "Hospitalization" &
+                                    !is.na(dat$daoohr90)],
+                    n, replace = TRUE)
+    df$out <- df$out + gamma_list[i]*df$trt*(df$out > 0) + rnorm(n, 0, 0.1)
+    df$out[df$out > 90] <- 90
+    effect_sizes[i] <- mean(df$out[df$trt == 1]) - mean(df$out[df$trt == 0])
+  }
+  
+  #plot(gamma_list*trt_effect, effect_sizes)
+  return(gamma_list[which.min(abs(effect_sizes - trt_effect))])
+  
+}
+```
+
+Now that the helper functions are defined, we define the two simulation functions corresponding to each method.
+
+```{r}
+# Simulation function to calculate power for treatment effect
+# using resampling from first trial
+simulate_trial <- function(n, num_sites, trt_effect, trt_effect2,
+                           makehist = FALSE, makehist2 = FALSE) {
+  
+  # Varying enrollment by site
+  prop_by_site <- rnorm2(num_sites, 1/num_sites, 0.33/num_sites)[1:num_sites, 1]
+  # Correct (rare) potential negative enrollment in a small site
+  if (min(prop_by_site) < 0) {
+    prop_by_site[which.max(prop_by_site)] <- 
+      prop_by_site[which.max(prop_by_site)] +
+      prop_by_site[which.min(prop_by_site)] - 0.01
+    prop_by_site[which.min(prop_by_site)] <- 0.01
+  }
+  
+  site <- rep(1:num_sites, round(prop_by_site*n))
+  if (length(site) < n) {
+    site <- c(site, rep(num_sites, n - length(site)))
+  } else if (length(site) > n) {
+    site <- site[-(1:(length(site) - n))]
+  }
+
+  trt <- rbinom(n, 1, 0.5)
+  df <- data.frame(site, trt)
+  
+  # Simulate primary outcome data using sampling w/ replacement
+  df$out1 <- sample(dat$daoohr30[dat$treatgroup == "Hospitalization" &
+                                    !is.na(dat$daoohr30)],
+                    n, replace = TRUE)
+  df$out1 <- df$out1 + trt_effect*df$trt*(df$out1 > 0) + rnorm(n, 0, 0.1)
+  df$out1[df$out1 > 30] <- 30
+  df$out1 <- round(df$out1, 1)
+  
+  if (makehist) {
+    hist(df$out1[df$trt == 0], breaks = 30, main = "Control Arm DAOOH",
+         xlab = "DAOOH (days)", xlim = c(0, 30), col = "lightblue")
+    hist(df$out1[df$trt == 1], breaks = 30, main = "Treatment Arm DAOOH",
+         xlab = "DAOOH (days)", xlim = c(0, 30), col = "lightgreen")
+  }
+  
+  # Simulate secondary outcome data using sampling w/ replacement
+  df$out2 <- sample(dat$daoohr90[dat$treatgroup == "Hospitalization" &
+                                    !is.na(dat$daoohr90)],
+                    n, replace = TRUE)
+  df$out2 <- df$out2 + trt_effect2*df$trt*(df$out2 > 0) + rnorm(n, 0, 0.1)
+  df$out2[df$out2 > 90] <- 90
+  df$out2 <- round(df$out2, 1)
+  
+  if (makehist2) {
+    hist(df$out2[df$trt == 0], breaks = 90, main = "Control Arm DAOOH",
+         xlab = "DAOOH (days)", xlim = c(0, 90), col = "lightblue")
+    hist(df$out2[df$trt == 1], breaks = 90, main = "Treatment Arm DAOOH",
+         xlab = "DAOOH (days)", xlim = c(0, 90), col = "lightgreen")
+    print(mean(df$out2[df$trt == 1]) - mean(df$out2[df$trt == 0]))
+  }
+  
+  # Fit models for primary/secondary outcome and check power for
+  # superiority and non-inferiority respectively
+  mwtest <- wilcox.test(df$out1[df$trt == 1], df$out1[df$trt == 0],
+                        alternative = "greater")$p.value
+  mwtest2 <- wilcox.test(df$out2[df$trt == 1], df$out2[df$trt == 0],
+                        alternative = "greater", mu = -0.5)$p.value
+  mwtest3 <- wilcox.test(df$out2[df$trt == 1], df$out2[df$trt == 0],
+                        alternative = "greater")$p.value
+  
+  return(c(#mean(df$out1[df$trt == 1], na.rm = T) -
+             #mean(df$out1[df$trt == 0], na.rm = T),
+           #mean(df$out2[df$trt == 1], na.rm = T) -
+             #mean(df$out2[df$trt == 0], na.rm = T),
+           1*(mwtest < 0.05),
+           1*(mwtest2 < 0.05),
+           1*(mwtest3 < 0.05)))
+  
+}
+
+# Simulation function to calculate power for treatment effect
+# using linear mixed models fit to first trial
+simulate_trial2 <- function(n, num_sites, trt_effect, trt_effect2,
+                            makehist = FALSE, makehist2 = FALSE) {
+  
+  # Varying enrollment by site
+  prop_by_site <- rnorm2(num_sites, 1/num_sites, 0.33/num_sites)[1:num_sites, 1]
+  # Correct (rare) potential negative enrollment in a small site
+  if (min(prop_by_site) < 0) {
+    prop_by_site[which.max(prop_by_site)] <- 
+      prop_by_site[which.max(prop_by_site)] +
+      prop_by_site[which.min(prop_by_site)] - 0.01
+    prop_by_site[which.min(prop_by_site)] <- 0.01
+  }
+  
+  site <- rep(1:num_sites, round(prop_by_site*n))
+  if (length(site) < n) {
+    site <- c(site, rep(num_sites, n - length(site)))
+  } else if (length(site) > n) {
+    site <- site[-(1:(length(site) - n))]
+  }
+
+  trt <- rbinom(n, 1, 0.5)
+  df <- data.frame(site, trt)
+  
+  # Simulate primary outcome data based on SSU-1 model fit (Gaussian)
+  alpha1 <- rnorm(num_sites, 0, sd_random1)
+  df$out1 <- model_intercept1 + trt_effect*df$trt +
+    rep(alpha1, table(df$site)) + rnorm(n, 0, sd_residual1)
+  df$out1[df$out1 > 30] <- 30
+  df$mort1 <- rbinom(n, 1, mort30)
+  df$out1[df$mort1 == 1] <- 0
+  df$out1 <- round(df$out1, 1)
+  
+  if (makehist) {
+    hist(df$out1[df$trt == 0], breaks = 30, main = "Control Arm DAOOH",
+         xlab = "DAOOH (days)", xlim = c(0, 30), col = "lightblue")
+    hist(df$out1[df$trt == 1], breaks = 30, main = "Treatment Arm DAOOH",
+         xlab = "DAOOH (days)", xlim = c(0, 30), col = "lightgreen")
+  }
+  
+  # Simulate secondary outcome data based on SSU-1 model fit (Gaussian)
+  alpha2 <- rnorm(num_sites, 0, sd_random2)
+  df$out2 <- model_intercept2 + trt_effect2*df$trt + rep(alpha2, table(df$site)) + rnorm(n, 0, sd_residual2)
+  df$out2[df$out2 > 90] <- 90
+  df$mort2 <- rbinom(n, 1, mort90)
+  df$out2[df$mort2 == 1] <- 0
+  df$out2 <- round(df$out2, 1)
+  
+  if (makehist2) {
+    hist(df$out2[df$trt == 0], breaks = 90, main = "Control Arm DAOOH",
+         xlab = "DAOOH (days)", xlim = c(0, 90), col = "lightblue")
+    hist(df$out2[df$trt == 1], breaks = 90, main = "Treatment Arm DAOOH",
+         xlab = "DAOOH (days)", xlim = c(0, 90), col = "lightgreen")
+    print(mean(df$out2[df$trt == 1]) - mean(df$out2[df$trt == 0]))
+  }
+  
+  # Simulate complete at random dropout
+  df$out1[rbinom(n, 1, 0.1)] <- NA
+  df$out2[rbinom(n, 1, 0.15)] <- NA
+
+  # Fit models for primary/secondary outcome and check power for
+  # superiority and non-inferiority respectively
+  mwtest <- wilcox.test(df$out1[df$trt == 1], df$out1[df$trt == 0],
+                        alternative = "greater")$p.value
+  mwtest2 <- wilcox.test(df$out2[df$trt == 1], df$out2[df$trt == 0],
+                        alternative = "greater", mu = -0.5)$p.value
+  mwtest3 <- wilcox.test(df$out2[df$trt == 1], df$out2[df$trt == 0],
+                        alternative = "greater")$p.value
+  
+  return(c(#mean(df$out1[df$trt == 1], na.rm = T) -
+             #mean(df$out1[df$trt == 0], na.rm = T),
+           #mean(df$out2[df$trt == 1], na.rm = T) -
+             #mean(df$out2[df$trt == 0], na.rm = T),
+           1*(mwtest < 0.05),
+           1*(mwtest2 < 0.05),
+           1*(mwtest3 < 0.05)))
+  
+}
+```
+
+Now we run 1000 simulations across sample sizes of interest to assess power for each outcome and simulation approach. By default the second approach is not plotted, but can be included by uncommenting the relevant lines.
+
+```{r warning=FALSE}
+# Run 1000 simulations for 14 sites and 850 to 1250 sample size
+set.seed(825)
+sample_sizes <- c(850, 950, 1050, 1150, 1250)
+
+# Uncomment extra rows if wanting to run the second approach
+
+# Find parameters that correspond to treatment effects of interest
+#trt_beta <- find_beta(14, 1)
+#trt_beta2 <- find_beta2(14, 1)
+trt_gamma <- find_gamma(14, 1)
+trt_gamma2 <- find_gamma2(14, 1)
+
+power_matsample1 <- rep(NA, length(sample_sizes))
+power_matsample2 <- rep(NA, length(sample_sizes))
+power_matsample3 <- rep(NA, length(sample_sizes))
+power_mat1 <- rep(NA, length(sample_sizes))
+power_mat2 <- rep(NA, length(sample_sizes))
+power_mat3 <- rep(NA, length(sample_sizes))
+nsims <- 100
+
+for (i in 1:length(sample_sizes)) {
+  
+  # Simulate using sampling with replacement
+  simresults <- replicate(nsims,
+                          simulate_trial(sample_sizes[i],
+                                         14, trt_gamma, trt_gamma2))
+  power_matsample1[i] <- mean(simresults[1, ], na.rm = T)
+  power_matsample2[i] <- mean(simresults[2, ], na.rm = T)
+  power_matsample3[i] <- mean(simresults[3, ], na.rm = T)
+  
+  # Simulate using linear mixed models
+  #simresults2 <- replicate(nsims,
+                           #simulate_trial2(sample_sizes[i],
+                                         #14, trt_beta, trt_beta2))
+  #power_mat1[i] <- mean(simresults2[1, ], na.rm = T)
+  #power_mat2[i] <- mean(simresults2[2, ], na.rm = T)
+  #power_mat3[i] <- mean(simresults2[3, ], na.rm = T)
+  
+}
+
+# Plot power by sample size using one or both approaches
+df_plot <-
+  data.frame("Power_Primary" = c(power_mat1, power_matsample1),
+             "Power_Secondary_Noninf" = c(power_mat2, power_matsample2),
+             "Power_Secondary_Sup" = c(power_mat3, power_matsample3),
+             "Sample_Size" = rep(sample_sizes, 2),
+             "Approach" = rep(c("Linear Mixed Model",
+                                "Sampling with Replacement"),
+                                     each = length(sample_sizes)))
+
+ggplot(df_plot, aes(x = Sample_Size, y = Power_Primary,
+                    col = Approach)) +
+  geom_point() + 
+  geom_line() +
+  ylim(0.5, 1) +
+  xlab("Sample Size") +
+  ylab("Power") +
+  ggtitle("Power for primary outcome") +
+  theme_bw()
+
+ggplot(df_plot, aes(x = Sample_Size, y = Power_Secondary_Noninf,
+                    col = Approach)) +
+  geom_point() + 
+  geom_line() +
+  ylim(0.5, 1) +
+  xlab("Sample Size") +
+  ylab("Power") +
+  ggtitle("Power for secondary outcome") +
+  theme_bw()
+
+# Exploratory plot for superiority on secondary outcome
+ggplot(df_plot, aes(x = Sample_Size, y = Power_Secondary_Sup,
+                    col = Approach)) +
+  geom_point() + 
+  geom_line() +
+  ylim(0.3, 1) +
+  ggtitle("Power for secondary outcome") +
+  theme_bw()
+```
+
+## Heterogeneity of Treatment Effect (HTE)
+
+Now we add an additional simulation function to study HTE across a binary covariate, followed by another simulation study to calculate power in this setting. We used the linear model approach described above, which is more straightforward for studying effect modification than the sampling approach (and likely more conservative).
+
+```{r}
+# Function to find beta coefficient for linear model under HTE
+# (outcome is truncated when simulating from linear, shifting trt effect)
+find_beta_hte <- function(num_sites, trt_effect, cov_prob, cov_effect) {
+  
+  n <- 5e4
+  prop_by_site <- rnorm2(num_sites, 1/num_sites, 0.33/num_sites)[1:num_sites, 1]
+  site <- rep(1:num_sites, round(prop_by_site*n))
+  if (length(site) < n) {
+    site <- c(site, rep(num_sites, n - length(site)))
+  } else if (length(site) > n) {
+    site <- site[-(1:(length(site) - n))]
+  }
+  trt <- rbinom(n, 1, 0.5)
+  df <- data.frame(site, trt)
+  df$covar <- rbinom(n, 1, cov_prob)
+  
+  alpha0 <- rnorm(num_sites, 0, sd_random1)
+  beta_list <- seq(0.5, 1.5, by = 0.04)*trt_effect
+  effect_sizes <- rep(NA, length(beta_list))
+  for (i in 1:length(beta_list)) {
+    df$out <- model_intercept1 + beta_list[i]*df$trt -
+      cov_effect*df$covar*(1-df$trt) + cov_effect*df$trt*df$covar +
+      rep(alpha0, table(df$site)) + rnorm(n, 0, sd_residual1)
+    df$out[df$out > 30] <- 30
+    outmod <- lmer(out ~ trt*covar + (1 | site), data = df)
+    effect_sizes[i] <- summary(outmod)$coefficients[2, 1]
+  }
+  
+  return(beta_list[which.min(abs(effect_sizes - trt_effect))])
+  
+}
+
+# Simulation function to calculate power for treatment effect
+simulate_trial_hte <- function(n, num_sites, trt_effect,
+                               cov_prob, cov_effect) {
+  
+  # Varying enrollment by site
+  prop_by_site <- rnorm2(num_sites, 1/num_sites, 0.33/num_sites)[1:num_sites, 1]
+  # Correct (rare) potential negative enrollment in a small site
+  if (min(prop_by_site) < 0) {
+    prop_by_site[which.max(prop_by_site)] <- 
+      prop_by_site[which.max(prop_by_site)] +
+      prop_by_site[which.min(prop_by_site)] - 0.01
+    prop_by_site[which.min(prop_by_site)] <- 0.01
+  }
+  
+  site <- rep(1:num_sites, round(prop_by_site*n))
+  if (length(site) < n) {
+    site <- c(site, rep(num_sites, n - length(site)))
+  } else if (length(site) > n) {
+    site <- site[-(1:(length(site) - n))]
+  }
+
+  trt <- rbinom(n, 1, 0.5)
+  df <- data.frame(site, trt)
+  df$covar <- rbinom(n, 1, cov_prob)
+  
+  # Simulate primary outcome data based on SSU-1 model fit (Gaussian)
+  alpha1 <- rnorm(num_sites, 0, sd_random1)
+  df$out1 <- model_intercept1 + trt_effect*df$trt -
+    cov_effect*df$covar*(1-df$trt) + cov_effect*df$trt*df$covar +
+    rep(alpha1, table(df$site)) + rnorm(n, 0, sd_residual1)
+  df$out1[df$out1 > 30] <- 30
+  df$mort1 <- rbinom(n, 1, mort30)
+  df$out1[df$mort1 == 1] <- 0
+  df$out1 <- round(df$out1, 1)
+  
+  # Simulate complete at random dropout
+  df$out1[rbinom(n, 1, 0.1)] <- NA
+
+  # Fit model for primary outcome and check power for interaction
+  outmod1 <- tryCatch(clmm2(as.factor(out1) ~ #as.factor(trt),
+                            as.factor(trt)*covar,
+                   random = as.factor(site), Hess = TRUE,
+                   threshold = "equidistant",
+                   data = df[!is.na(df$out1), ]), error = function(e) e)
+  
+  subgroupdiff <- mean(df$out1[df$trt == 1 & df$covar == 1], na.rm = T) -
+    mean(df$out1[df$trt == 0 & df$covar == 1], na.rm = T) -
+    (mean(df$out1[df$trt == 1 & df$covar == 0], na.rm = T) -
+       mean(df$out1[df$trt == 0 & df$covar == 0], na.rm = T))
+  
+  if (class(outmod1)[2] == "error") {
+    return(c(NA))
+  } else{
+
+  return(c(1*(summary(outmod1)$coefficients[5, 4] < 0.05),
+           subgroupdiff))
+  }
+  
+}
+```
+
+Power analysis for HTE:
+
+```{r warning=FALSE}
+# Run 1000 simulations for 14 sites and 850 to 1250 sample size
+set.seed(1234)
+sample_sizes <- c(850, 1050, 1250)
+hte_coef <- seq(0.7, 1.1, by = 0.1)
+power_mat_hte <- array(NA, c(length(sample_sizes), length(hte_coef)))
+subgroup_diff_mat <- array(NA, c(length(sample_sizes), length(hte_coef)))
+nsims <- 500
+
+for(j in 1:length(hte_coef)) {
+  
+  trt_beta <- find_beta_hte(14, 1, 0.6, hte_coef[j])
+  for (i in 1:length(sample_sizes)) {
+    simresults <- replicate(nsims,
+                            simulate_trial_hte(sample_sizes[i],
+                                               14, trt_beta, 0.6,
+                                               hte_coef[j]))
+    power_mat_hte[i, j] <- mean(simresults[1, ], na.rm = T)
+    subgroup_diff_mat[i, j] <- mean(simresults[2, ], na.rm = T)
+  }
+  
+}
+
+# Plot power by sample size and number of periods
+df_plot <-
+  data.frame("Power_Int" = c(power_mat_hte),
+             "Sample_Size" = rep(sample_sizes, length(hte_coef)),
+             "HTE_Diff" = rep(round(colMeans(subgroup_diff_mat), 1),
+                              each = length(sample_sizes)))
+
+ggplot(df_plot, aes(x = HTE_Diff, y = Power_Int,
+                    group = factor(Sample_Size),
+                    colour = factor(Sample_Size))) +
+  geom_point() + 
+  geom_line() +
+  xlab("Difference in effect across subgroups (days)") +
+  ylab("Power") +
+  # Change legend title
+  scale_color_discrete(name = "Sample Size") +
+  ggtitle("Power for interaction") +
+  theme_bw()
+```

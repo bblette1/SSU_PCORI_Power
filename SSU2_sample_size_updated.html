@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.450">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>SSU-2 Power Calculations</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="SSU2_sample_size_updated_files/libs/clipboard/clipboard.min.js"></script>
+<script src="SSU2_sample_size_updated_files/libs/quarto-html/quarto.js"></script>
+<script src="SSU2_sample_size_updated_files/libs/quarto-html/popper.min.js"></script>
+<script src="SSU2_sample_size_updated_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="SSU2_sample_size_updated_files/libs/quarto-html/anchor.min.js"></script>
+<link href="SSU2_sample_size_updated_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="SSU2_sample_size_updated_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="SSU2_sample_size_updated_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="SSU2_sample_size_updated_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="SSU2_sample_size_updated_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">SSU-2 Power Calculations</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<section id="summary" class="level2">
+<h2 class="anchored" data-anchor-id="summary">Summary</h2>
+<p>This document performs power and sample size calculations for the SSU-2 trial. The primary outcome is 30-day DAOOH to be compared across arms with a Mann-Whitney U Test. The secondary outcome is 90-day DAOOH assessed similarly but using a non-inferiority framework. Power is assessed using simulations informed by prior data. Power to assess heterogeneity of treatment effect for the primary outcome was also assessed. From these results, a final proposed sample size of n=1250 was justified.</p>
+</section>
+<section id="gather-info-from-ssu-1-data" class="level2">
+<h2 class="anchored" data-anchor-id="gather-info-from-ssu-1-data">Gather Info from SSU-1 Data</h2>
+<p>First will load in libraries and SSU-1 data.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span>(<span class="at">list =</span> <span class="fu">ls</span>())</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Load libraries and define helper functions</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(lme4)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: Matrix</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(lmerTest)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'lmerTest'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:lme4':
+
+    lmer</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:stats':
+
+    step</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(geepack)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ordinal)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(clusrank)</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>rnorm2 <span class="ot">&lt;-</span> <span class="cf">function</span>(n, mean, sd) { mean<span class="sc">+</span>sd<span class="sc">*</span><span class="fu">scale</span>(<span class="fu">rnorm</span>(n)) }</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Data processing</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>dat <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">"/Users/bryanblette/OneDrive_VUMC/Grants/SSU-2/SSU study data.csv"</span>)</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>dat<span class="sc">$</span>daoohr30 <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(dat<span class="sc">$</span>daoohr30)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: NAs introduced by coercion</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>dat<span class="sc">$</span>daoohr90 <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(dat<span class="sc">$</span>daoohr90)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: NAs introduced by coercion</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>dat<span class="sc">$</span>site <span class="ot">&lt;-</span> <span class="fu">as.factor</span>(dat<span class="sc">$</span>site)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="co"># For reproducibility without data, summary statistics put in comments</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Estimate proportion deceased before 30 and 90 days</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>mort30 <span class="ot">&lt;-</span> <span class="fu">mean</span>(dat<span class="sc">$</span>daoohr30[<span class="sc">!</span><span class="fu">is.na</span>(dat<span class="sc">$</span>daoohr30)] <span class="sc">==</span> <span class="dv">0</span>) <span class="co"># 0.0109</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>mort90 <span class="ot">&lt;-</span> <span class="fu">mean</span>(dat<span class="sc">$</span>daoohr90[<span class="sc">!</span><span class="fu">is.na</span>(dat<span class="sc">$</span>daoohr90)] <span class="sc">==</span> <span class="dv">0</span>) <span class="co"># 0.0116</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Model primary outcome from SSU-1 data using Gaussian family</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>ssu1_mod1 <span class="ot">&lt;-</span> <span class="fu">lmer</span>(daoohr30 <span class="sc">~</span> <span class="fu">as.factor</span>(treatgroup) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> site),</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>                 <span class="at">data =</span> dat[<span class="sc">!</span><span class="fu">is.na</span>(dat<span class="sc">$</span>daoohr30), ])</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>model_intercept1 <span class="ot">&lt;-</span> <span class="fu">summary</span>(ssu1_mod1)<span class="sc">$</span>coefficients[<span class="dv">1</span>, <span class="dv">1</span>] <span class="co"># 23.82</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>sd_random1 <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="fu">summary</span>(ssu1_mod1)[[<span class="dv">13</span>]][<span class="dv">1</span>]<span class="sc">$</span>site[<span class="dv">1</span>]) <span class="co"># 1.683</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>sd_residual1 <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">summary</span>(ssu1_mod1)[[<span class="dv">11</span>]]) <span class="co"># 5.343</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>ssu1_mod2 <span class="ot">&lt;-</span> <span class="fu">lmer</span>(daoohr90 <span class="sc">~</span> <span class="fu">as.factor</span>(treatgroup) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> site),</span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>                  <span class="at">data =</span> dat[<span class="sc">!</span><span class="fu">is.na</span>(dat<span class="sc">$</span>daoohr90), ])</span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>model_intercept2 <span class="ot">&lt;-</span> <span class="fu">summary</span>(ssu1_mod2)<span class="sc">$</span>coefficients[<span class="dv">1</span>, <span class="dv">1</span>] <span class="co"># 78.46</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>sd_random2 <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="fu">summary</span>(ssu1_mod2)[[<span class="dv">13</span>]][<span class="dv">1</span>]<span class="sc">$</span>site[<span class="dv">1</span>]) <span class="co"># 2.483</span></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>sd_residual2 <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">summary</span>(ssu1_mod2)[[<span class="dv">11</span>]]) <span class="co"># 12.43</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We considered two simulation procedures. In the first approach, data were simulated by sampling with replacement and a small amount of random noise from the prior trial’s hospitalization arm (and then shifting according to assumed treatment effect to simulate an SSU arm). However, if a sampled value was 0 (indicating death prior to 30 days) no treatment effect was assumed for that individual. The first approach is not reproducible for readers without the data, so we constructed a second approach that is likely less realistic but only relies on summary statistics. In the second approach, data were simulated using a mixture model, where probability of death was simulated according to probabilities observed in our prior trial, and individuals expected to survive had DAOOH values simulated from a Gaussian mixed-effects model (with parameters including random intercept variance corresponding to ICC estimated from the prior trial). Both simulation methods required truncating values that extend beyond 30 or 90 days as needed and assumed 10% lost to follow-up. They both also leveraged a function to find a treatment effect parameter that aligned with the desired difference on the difference scale (after accounting for death and value truncation). The functions are given here:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Function to find beta coefficient for linear model</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="co"># (outcome is truncated when simulating from linear, shifting trt effect)</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>find_beta <span class="ot">&lt;-</span> <span class="cf">function</span>(num_sites, trt_effect) {</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  n <span class="ot">&lt;-</span> <span class="fl">5e4</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  prop_by_site <span class="ot">&lt;-</span> <span class="fu">rnorm2</span>(num_sites, <span class="dv">1</span><span class="sc">/</span>num_sites, <span class="fl">0.33</span><span class="sc">/</span>num_sites)[<span class="dv">1</span><span class="sc">:</span>num_sites, <span class="dv">1</span>]</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  site <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span><span class="sc">:</span>num_sites, <span class="fu">round</span>(prop_by_site<span class="sc">*</span>n))</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">length</span>(site) <span class="sc">&lt;</span> n) {</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    site <span class="ot">&lt;-</span> <span class="fu">c</span>(site, <span class="fu">rep</span>(num_sites, n <span class="sc">-</span> <span class="fu">length</span>(site)))</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> <span class="cf">if</span> (<span class="fu">length</span>(site) <span class="sc">&gt;</span> n) {</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>    site <span class="ot">&lt;-</span> site[<span class="sc">-</span>(<span class="dv">1</span><span class="sc">:</span>(<span class="fu">length</span>(site) <span class="sc">-</span> n))]</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>  trt <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(n, <span class="dv">1</span>, <span class="fl">0.5</span>)</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>  df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(site, trt)</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>  alpha0 <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(num_sites, <span class="dv">0</span>, sd_random1)</span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>  beta_list <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="fl">0.5</span>, <span class="fl">1.5</span>, <span class="at">by =</span> <span class="fl">0.04</span>)<span class="sc">*</span>trt_effect</span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>  effect_sizes <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="cn">NA</span>, <span class="fu">length</span>(beta_list))</span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(beta_list)) {</span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>    df<span class="sc">$</span>out <span class="ot">&lt;-</span> model_intercept1 <span class="sc">+</span> beta_list[i]<span class="sc">*</span>df<span class="sc">$</span>trt <span class="sc">+</span></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>      <span class="fu">rep</span>(alpha0, <span class="fu">table</span>(df<span class="sc">$</span>site)) <span class="sc">+</span> <span class="fu">rnorm</span>(n, <span class="dv">0</span>, sd_residual1)</span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>    df<span class="sc">$</span>out[df<span class="sc">$</span>out <span class="sc">&gt;</span> <span class="dv">30</span>] <span class="ot">&lt;-</span> <span class="dv">30</span></span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>    outmod <span class="ot">&lt;-</span> <span class="fu">lmer</span>(out <span class="sc">~</span> trt <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> site), <span class="at">data =</span> df)</span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a>    effect_sizes[i] <span class="ot">&lt;-</span> <span class="fu">summary</span>(outmod)<span class="sc">$</span>coefficients[<span class="dv">2</span>, <span class="dv">1</span>]</span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(beta_list[<span class="fu">which.min</span>(<span class="fu">abs</span>(effect_sizes <span class="sc">-</span> trt_effect))])</span>
+<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb12-29"><a href="#cb12-29" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb12-30"><a href="#cb12-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-31"><a href="#cb12-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-32"><a href="#cb12-32" aria-hidden="true" tabindex="-1"></a><span class="co"># Function to find beta coefficient for linear model (for 90 day outcome)</span></span>
+<span id="cb12-33"><a href="#cb12-33" aria-hidden="true" tabindex="-1"></a><span class="co"># (outcome is truncated when simulating from linear, shifting trt effect)</span></span>
+<span id="cb12-34"><a href="#cb12-34" aria-hidden="true" tabindex="-1"></a>find_beta2 <span class="ot">&lt;-</span> <span class="cf">function</span>(num_sites, trt_effect) {</span>
+<span id="cb12-35"><a href="#cb12-35" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb12-36"><a href="#cb12-36" aria-hidden="true" tabindex="-1"></a>  n <span class="ot">&lt;-</span> <span class="fl">5e4</span></span>
+<span id="cb12-37"><a href="#cb12-37" aria-hidden="true" tabindex="-1"></a>  prop_by_site <span class="ot">&lt;-</span> <span class="fu">rnorm2</span>(num_sites, <span class="dv">1</span><span class="sc">/</span>num_sites, <span class="fl">0.33</span><span class="sc">/</span>num_sites)[<span class="dv">1</span><span class="sc">:</span>num_sites, <span class="dv">1</span>]</span>
+<span id="cb12-38"><a href="#cb12-38" aria-hidden="true" tabindex="-1"></a>  site <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span><span class="sc">:</span>num_sites, <span class="fu">round</span>(prop_by_site<span class="sc">*</span>n))</span>
+<span id="cb12-39"><a href="#cb12-39" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">length</span>(site) <span class="sc">&lt;</span> n) {</span>
+<span id="cb12-40"><a href="#cb12-40" aria-hidden="true" tabindex="-1"></a>    site <span class="ot">&lt;-</span> <span class="fu">c</span>(site, <span class="fu">rep</span>(num_sites, n <span class="sc">-</span> <span class="fu">length</span>(site)))</span>
+<span id="cb12-41"><a href="#cb12-41" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> <span class="cf">if</span> (<span class="fu">length</span>(site) <span class="sc">&gt;</span> n) {</span>
+<span id="cb12-42"><a href="#cb12-42" aria-hidden="true" tabindex="-1"></a>    site <span class="ot">&lt;-</span> site[<span class="sc">-</span>(<span class="dv">1</span><span class="sc">:</span>(<span class="fu">length</span>(site) <span class="sc">-</span> n))]</span>
+<span id="cb12-43"><a href="#cb12-43" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb12-44"><a href="#cb12-44" aria-hidden="true" tabindex="-1"></a>  trt <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(n, <span class="dv">1</span>, <span class="fl">0.5</span>)</span>
+<span id="cb12-45"><a href="#cb12-45" aria-hidden="true" tabindex="-1"></a>  df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(site, trt)</span>
+<span id="cb12-46"><a href="#cb12-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-47"><a href="#cb12-47" aria-hidden="true" tabindex="-1"></a>  alpha0 <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(num_sites, <span class="dv">0</span>, sd_random2)</span>
+<span id="cb12-48"><a href="#cb12-48" aria-hidden="true" tabindex="-1"></a>  beta_list <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="fl">0.5</span>, <span class="fl">1.5</span>, <span class="at">by =</span> <span class="fl">0.04</span>)<span class="sc">*</span>trt_effect</span>
+<span id="cb12-49"><a href="#cb12-49" aria-hidden="true" tabindex="-1"></a>  effect_sizes <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="cn">NA</span>, <span class="fu">length</span>(beta_list))</span>
+<span id="cb12-50"><a href="#cb12-50" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(beta_list)) {</span>
+<span id="cb12-51"><a href="#cb12-51" aria-hidden="true" tabindex="-1"></a>    df<span class="sc">$</span>out <span class="ot">&lt;-</span> model_intercept2 <span class="sc">+</span> beta_list[i]<span class="sc">*</span>df<span class="sc">$</span>trt <span class="sc">-</span></span>
+<span id="cb12-52"><a href="#cb12-52" aria-hidden="true" tabindex="-1"></a>      <span class="fu">rep</span>(alpha0, <span class="fu">table</span>(df<span class="sc">$</span>site)) <span class="sc">+</span> <span class="fu">rnorm</span>(n, <span class="dv">0</span>, sd_residual2)</span>
+<span id="cb12-53"><a href="#cb12-53" aria-hidden="true" tabindex="-1"></a>    df<span class="sc">$</span>out[df<span class="sc">$</span>out <span class="sc">&gt;</span> <span class="dv">90</span>] <span class="ot">&lt;-</span> <span class="dv">90</span></span>
+<span id="cb12-54"><a href="#cb12-54" aria-hidden="true" tabindex="-1"></a>    outmod <span class="ot">&lt;-</span> <span class="fu">lmer</span>(out <span class="sc">~</span> trt <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> site), <span class="at">data =</span> df)</span>
+<span id="cb12-55"><a href="#cb12-55" aria-hidden="true" tabindex="-1"></a>    effect_sizes[i] <span class="ot">&lt;-</span> <span class="fu">summary</span>(outmod)<span class="sc">$</span>coefficients[<span class="dv">2</span>, <span class="dv">1</span>]</span>
+<span id="cb12-56"><a href="#cb12-56" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb12-57"><a href="#cb12-57" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb12-58"><a href="#cb12-58" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(beta_list[<span class="fu">which.min</span>(<span class="fu">abs</span>(effect_sizes <span class="sc">-</span> trt_effect))])</span>
+<span id="cb12-59"><a href="#cb12-59" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb12-60"><a href="#cb12-60" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb12-61"><a href="#cb12-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-62"><a href="#cb12-62" aria-hidden="true" tabindex="-1"></a><span class="co"># Function to find appropriate (30 day) shift when sampling with replacement</span></span>
+<span id="cb12-63"><a href="#cb12-63" aria-hidden="true" tabindex="-1"></a><span class="co"># to match a desired treatment effect (accounting for boundaries)</span></span>
+<span id="cb12-64"><a href="#cb12-64" aria-hidden="true" tabindex="-1"></a>find_gamma <span class="ot">&lt;-</span> <span class="cf">function</span>(num_sites, trt_effect) {</span>
+<span id="cb12-65"><a href="#cb12-65" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb12-66"><a href="#cb12-66" aria-hidden="true" tabindex="-1"></a>  n <span class="ot">&lt;-</span> <span class="fl">5e4</span></span>
+<span id="cb12-67"><a href="#cb12-67" aria-hidden="true" tabindex="-1"></a>  prop_by_site <span class="ot">&lt;-</span> <span class="fu">rnorm2</span>(num_sites, <span class="dv">1</span><span class="sc">/</span>num_sites, <span class="fl">0.33</span><span class="sc">/</span>num_sites)[<span class="dv">1</span><span class="sc">:</span>num_sites, <span class="dv">1</span>]</span>
+<span id="cb12-68"><a href="#cb12-68" aria-hidden="true" tabindex="-1"></a>  site <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span><span class="sc">:</span>num_sites, <span class="fu">round</span>(prop_by_site<span class="sc">*</span>n))</span>
+<span id="cb12-69"><a href="#cb12-69" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">length</span>(site) <span class="sc">&lt;</span> n) {</span>
+<span id="cb12-70"><a href="#cb12-70" aria-hidden="true" tabindex="-1"></a>    site <span class="ot">&lt;-</span> <span class="fu">c</span>(site, <span class="fu">rep</span>(num_sites, n <span class="sc">-</span> <span class="fu">length</span>(site)))</span>
+<span id="cb12-71"><a href="#cb12-71" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> <span class="cf">if</span> (<span class="fu">length</span>(site) <span class="sc">&gt;</span> n) {</span>
+<span id="cb12-72"><a href="#cb12-72" aria-hidden="true" tabindex="-1"></a>    site <span class="ot">&lt;-</span> site[<span class="sc">-</span>(<span class="dv">1</span><span class="sc">:</span>(<span class="fu">length</span>(site) <span class="sc">-</span> n))]</span>
+<span id="cb12-73"><a href="#cb12-73" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb12-74"><a href="#cb12-74" aria-hidden="true" tabindex="-1"></a>  trt <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(n, <span class="dv">1</span>, <span class="fl">0.5</span>)</span>
+<span id="cb12-75"><a href="#cb12-75" aria-hidden="true" tabindex="-1"></a>  df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(site, trt)</span>
+<span id="cb12-76"><a href="#cb12-76" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-77"><a href="#cb12-77" aria-hidden="true" tabindex="-1"></a>  gamma_list <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="fl">0.5</span>, <span class="fl">1.5</span>, <span class="at">by =</span> <span class="fl">0.02</span>)<span class="sc">*</span>trt_effect</span>
+<span id="cb12-78"><a href="#cb12-78" aria-hidden="true" tabindex="-1"></a>  effect_sizes <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="cn">NA</span>, <span class="fu">length</span>(gamma_list))</span>
+<span id="cb12-79"><a href="#cb12-79" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb12-80"><a href="#cb12-80" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(gamma_list)) {</span>
+<span id="cb12-81"><a href="#cb12-81" aria-hidden="true" tabindex="-1"></a>    df<span class="sc">$</span>out <span class="ot">&lt;-</span> <span class="fu">sample</span>(dat<span class="sc">$</span>daoohr30[dat<span class="sc">$</span>treatgroup <span class="sc">==</span> <span class="st">"Hospitalization"</span> <span class="sc">&amp;</span></span>
+<span id="cb12-82"><a href="#cb12-82" aria-hidden="true" tabindex="-1"></a>                                    <span class="sc">!</span><span class="fu">is.na</span>(dat<span class="sc">$</span>daoohr30)],</span>
+<span id="cb12-83"><a href="#cb12-83" aria-hidden="true" tabindex="-1"></a>                     n, <span class="at">replace =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb12-84"><a href="#cb12-84" aria-hidden="true" tabindex="-1"></a>    df<span class="sc">$</span>out <span class="ot">&lt;-</span> df<span class="sc">$</span>out <span class="sc">+</span> gamma_list[i]<span class="sc">*</span>df<span class="sc">$</span>trt<span class="sc">*</span>(df<span class="sc">$</span>out <span class="sc">&gt;</span> <span class="dv">0</span>) <span class="sc">+</span> <span class="fu">rnorm</span>(n, <span class="dv">0</span>, <span class="fl">0.1</span>)</span>
+<span id="cb12-85"><a href="#cb12-85" aria-hidden="true" tabindex="-1"></a>    df<span class="sc">$</span>out[df<span class="sc">$</span>out <span class="sc">&gt;</span> <span class="dv">30</span>] <span class="ot">&lt;-</span> <span class="dv">30</span></span>
+<span id="cb12-86"><a href="#cb12-86" aria-hidden="true" tabindex="-1"></a>    effect_sizes[i] <span class="ot">&lt;-</span> <span class="fu">mean</span>(df<span class="sc">$</span>out[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">1</span>]) <span class="sc">-</span> <span class="fu">mean</span>(df<span class="sc">$</span>out[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">0</span>])</span>
+<span id="cb12-87"><a href="#cb12-87" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb12-88"><a href="#cb12-88" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb12-89"><a href="#cb12-89" aria-hidden="true" tabindex="-1"></a>  <span class="co">#plot(gamma_list*trt_effect, effect_sizes)</span></span>
+<span id="cb12-90"><a href="#cb12-90" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(gamma_list[<span class="fu">which.min</span>(<span class="fu">abs</span>(effect_sizes <span class="sc">-</span> trt_effect))])</span>
+<span id="cb12-91"><a href="#cb12-91" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb12-92"><a href="#cb12-92" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb12-93"><a href="#cb12-93" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-94"><a href="#cb12-94" aria-hidden="true" tabindex="-1"></a><span class="co"># Function to find appropriate (90 day) shift when sampling with replacement</span></span>
+<span id="cb12-95"><a href="#cb12-95" aria-hidden="true" tabindex="-1"></a><span class="co"># to match a desired treatment effect (accounting for boundaries)</span></span>
+<span id="cb12-96"><a href="#cb12-96" aria-hidden="true" tabindex="-1"></a>find_gamma2 <span class="ot">&lt;-</span> <span class="cf">function</span>(num_sites, trt_effect) {</span>
+<span id="cb12-97"><a href="#cb12-97" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb12-98"><a href="#cb12-98" aria-hidden="true" tabindex="-1"></a>  n <span class="ot">&lt;-</span> <span class="fl">5e4</span></span>
+<span id="cb12-99"><a href="#cb12-99" aria-hidden="true" tabindex="-1"></a>  prop_by_site <span class="ot">&lt;-</span> <span class="fu">rnorm2</span>(num_sites, <span class="dv">1</span><span class="sc">/</span>num_sites, <span class="fl">0.33</span><span class="sc">/</span>num_sites)[<span class="dv">1</span><span class="sc">:</span>num_sites, <span class="dv">1</span>]</span>
+<span id="cb12-100"><a href="#cb12-100" aria-hidden="true" tabindex="-1"></a>  site <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span><span class="sc">:</span>num_sites, <span class="fu">round</span>(prop_by_site<span class="sc">*</span>n))</span>
+<span id="cb12-101"><a href="#cb12-101" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">length</span>(site) <span class="sc">&lt;</span> n) {</span>
+<span id="cb12-102"><a href="#cb12-102" aria-hidden="true" tabindex="-1"></a>    site <span class="ot">&lt;-</span> <span class="fu">c</span>(site, <span class="fu">rep</span>(num_sites, n <span class="sc">-</span> <span class="fu">length</span>(site)))</span>
+<span id="cb12-103"><a href="#cb12-103" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> <span class="cf">if</span> (<span class="fu">length</span>(site) <span class="sc">&gt;</span> n) {</span>
+<span id="cb12-104"><a href="#cb12-104" aria-hidden="true" tabindex="-1"></a>    site <span class="ot">&lt;-</span> site[<span class="sc">-</span>(<span class="dv">1</span><span class="sc">:</span>(<span class="fu">length</span>(site) <span class="sc">-</span> n))]</span>
+<span id="cb12-105"><a href="#cb12-105" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb12-106"><a href="#cb12-106" aria-hidden="true" tabindex="-1"></a>  trt <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(n, <span class="dv">1</span>, <span class="fl">0.5</span>)</span>
+<span id="cb12-107"><a href="#cb12-107" aria-hidden="true" tabindex="-1"></a>  df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(site, trt)</span>
+<span id="cb12-108"><a href="#cb12-108" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-109"><a href="#cb12-109" aria-hidden="true" tabindex="-1"></a>  gamma_list <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="fl">0.5</span>, <span class="fl">1.5</span>, <span class="at">by =</span> <span class="fl">0.04</span>)<span class="sc">*</span>trt_effect</span>
+<span id="cb12-110"><a href="#cb12-110" aria-hidden="true" tabindex="-1"></a>  effect_sizes <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="cn">NA</span>, <span class="fu">length</span>(gamma_list))</span>
+<span id="cb12-111"><a href="#cb12-111" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb12-112"><a href="#cb12-112" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(gamma_list)) {</span>
+<span id="cb12-113"><a href="#cb12-113" aria-hidden="true" tabindex="-1"></a>    df<span class="sc">$</span>out <span class="ot">&lt;-</span> <span class="fu">sample</span>(dat<span class="sc">$</span>daoohr90[dat<span class="sc">$</span>treatgroup <span class="sc">==</span> <span class="st">"Hospitalization"</span> <span class="sc">&amp;</span></span>
+<span id="cb12-114"><a href="#cb12-114" aria-hidden="true" tabindex="-1"></a>                                    <span class="sc">!</span><span class="fu">is.na</span>(dat<span class="sc">$</span>daoohr90)],</span>
+<span id="cb12-115"><a href="#cb12-115" aria-hidden="true" tabindex="-1"></a>                    n, <span class="at">replace =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb12-116"><a href="#cb12-116" aria-hidden="true" tabindex="-1"></a>    df<span class="sc">$</span>out <span class="ot">&lt;-</span> df<span class="sc">$</span>out <span class="sc">+</span> gamma_list[i]<span class="sc">*</span>df<span class="sc">$</span>trt<span class="sc">*</span>(df<span class="sc">$</span>out <span class="sc">&gt;</span> <span class="dv">0</span>) <span class="sc">+</span> <span class="fu">rnorm</span>(n, <span class="dv">0</span>, <span class="fl">0.1</span>)</span>
+<span id="cb12-117"><a href="#cb12-117" aria-hidden="true" tabindex="-1"></a>    df<span class="sc">$</span>out[df<span class="sc">$</span>out <span class="sc">&gt;</span> <span class="dv">90</span>] <span class="ot">&lt;-</span> <span class="dv">90</span></span>
+<span id="cb12-118"><a href="#cb12-118" aria-hidden="true" tabindex="-1"></a>    effect_sizes[i] <span class="ot">&lt;-</span> <span class="fu">mean</span>(df<span class="sc">$</span>out[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">1</span>]) <span class="sc">-</span> <span class="fu">mean</span>(df<span class="sc">$</span>out[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">0</span>])</span>
+<span id="cb12-119"><a href="#cb12-119" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb12-120"><a href="#cb12-120" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb12-121"><a href="#cb12-121" aria-hidden="true" tabindex="-1"></a>  <span class="co">#plot(gamma_list*trt_effect, effect_sizes)</span></span>
+<span id="cb12-122"><a href="#cb12-122" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(gamma_list[<span class="fu">which.min</span>(<span class="fu">abs</span>(effect_sizes <span class="sc">-</span> trt_effect))])</span>
+<span id="cb12-123"><a href="#cb12-123" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb12-124"><a href="#cb12-124" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Now that the helper functions are defined, we define the two simulation functions corresponding to each method.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Simulation function to calculate power for treatment effect</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="co"># using resampling from first trial</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>simulate_trial <span class="ot">&lt;-</span> <span class="cf">function</span>(n, num_sites, trt_effect, trt_effect2,</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>                           <span class="at">makehist =</span> <span class="cn">FALSE</span>, <span class="at">makehist2 =</span> <span class="cn">FALSE</span>) {</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Varying enrollment by site</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  prop_by_site <span class="ot">&lt;-</span> <span class="fu">rnorm2</span>(num_sites, <span class="dv">1</span><span class="sc">/</span>num_sites, <span class="fl">0.33</span><span class="sc">/</span>num_sites)[<span class="dv">1</span><span class="sc">:</span>num_sites, <span class="dv">1</span>]</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Correct (rare) potential negative enrollment in a small site</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">min</span>(prop_by_site) <span class="sc">&lt;</span> <span class="dv">0</span>) {</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>    prop_by_site[<span class="fu">which.max</span>(prop_by_site)] <span class="ot">&lt;-</span> </span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>      prop_by_site[<span class="fu">which.max</span>(prop_by_site)] <span class="sc">+</span></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>      prop_by_site[<span class="fu">which.min</span>(prop_by_site)] <span class="sc">-</span> <span class="fl">0.01</span></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>    prop_by_site[<span class="fu">which.min</span>(prop_by_site)] <span class="ot">&lt;-</span> <span class="fl">0.01</span></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>  site <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span><span class="sc">:</span>num_sites, <span class="fu">round</span>(prop_by_site<span class="sc">*</span>n))</span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">length</span>(site) <span class="sc">&lt;</span> n) {</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>    site <span class="ot">&lt;-</span> <span class="fu">c</span>(site, <span class="fu">rep</span>(num_sites, n <span class="sc">-</span> <span class="fu">length</span>(site)))</span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> <span class="cf">if</span> (<span class="fu">length</span>(site) <span class="sc">&gt;</span> n) {</span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>    site <span class="ot">&lt;-</span> site[<span class="sc">-</span>(<span class="dv">1</span><span class="sc">:</span>(<span class="fu">length</span>(site) <span class="sc">-</span> n))]</span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>  trt <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(n, <span class="dv">1</span>, <span class="fl">0.5</span>)</span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a>  df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(site, trt)</span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Simulate primary outcome data using sampling w/ replacement</span></span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>out1 <span class="ot">&lt;-</span> <span class="fu">sample</span>(dat<span class="sc">$</span>daoohr30[dat<span class="sc">$</span>treatgroup <span class="sc">==</span> <span class="st">"Hospitalization"</span> <span class="sc">&amp;</span></span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a>                                    <span class="sc">!</span><span class="fu">is.na</span>(dat<span class="sc">$</span>daoohr30)],</span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a>                    n, <span class="at">replace =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>out1 <span class="ot">&lt;-</span> df<span class="sc">$</span>out1 <span class="sc">+</span> trt_effect<span class="sc">*</span>df<span class="sc">$</span>trt<span class="sc">*</span>(df<span class="sc">$</span>out1 <span class="sc">&gt;</span> <span class="dv">0</span>) <span class="sc">+</span> <span class="fu">rnorm</span>(n, <span class="dv">0</span>, <span class="fl">0.1</span>)</span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>out1[df<span class="sc">$</span>out1 <span class="sc">&gt;</span> <span class="dv">30</span>] <span class="ot">&lt;-</span> <span class="dv">30</span></span>
+<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>out1 <span class="ot">&lt;-</span> <span class="fu">round</span>(df<span class="sc">$</span>out1, <span class="dv">1</span>)</span>
+<span id="cb13-33"><a href="#cb13-33" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-34"><a href="#cb13-34" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (makehist) {</span>
+<span id="cb13-35"><a href="#cb13-35" aria-hidden="true" tabindex="-1"></a>    <span class="fu">hist</span>(df<span class="sc">$</span>out1[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">0</span>], <span class="at">breaks =</span> <span class="dv">30</span>, <span class="at">main =</span> <span class="st">"Control Arm DAOOH"</span>,</span>
+<span id="cb13-36"><a href="#cb13-36" aria-hidden="true" tabindex="-1"></a>         <span class="at">xlab =</span> <span class="st">"DAOOH (days)"</span>, <span class="at">xlim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">30</span>), <span class="at">col =</span> <span class="st">"lightblue"</span>)</span>
+<span id="cb13-37"><a href="#cb13-37" aria-hidden="true" tabindex="-1"></a>    <span class="fu">hist</span>(df<span class="sc">$</span>out1[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">1</span>], <span class="at">breaks =</span> <span class="dv">30</span>, <span class="at">main =</span> <span class="st">"Treatment Arm DAOOH"</span>,</span>
+<span id="cb13-38"><a href="#cb13-38" aria-hidden="true" tabindex="-1"></a>         <span class="at">xlab =</span> <span class="st">"DAOOH (days)"</span>, <span class="at">xlim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">30</span>), <span class="at">col =</span> <span class="st">"lightgreen"</span>)</span>
+<span id="cb13-39"><a href="#cb13-39" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb13-40"><a href="#cb13-40" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-41"><a href="#cb13-41" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Simulate secondary outcome data using sampling w/ replacement</span></span>
+<span id="cb13-42"><a href="#cb13-42" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>out2 <span class="ot">&lt;-</span> <span class="fu">sample</span>(dat<span class="sc">$</span>daoohr90[dat<span class="sc">$</span>treatgroup <span class="sc">==</span> <span class="st">"Hospitalization"</span> <span class="sc">&amp;</span></span>
+<span id="cb13-43"><a href="#cb13-43" aria-hidden="true" tabindex="-1"></a>                                    <span class="sc">!</span><span class="fu">is.na</span>(dat<span class="sc">$</span>daoohr90)],</span>
+<span id="cb13-44"><a href="#cb13-44" aria-hidden="true" tabindex="-1"></a>                    n, <span class="at">replace =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb13-45"><a href="#cb13-45" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>out2 <span class="ot">&lt;-</span> df<span class="sc">$</span>out2 <span class="sc">+</span> trt_effect2<span class="sc">*</span>df<span class="sc">$</span>trt<span class="sc">*</span>(df<span class="sc">$</span>out2 <span class="sc">&gt;</span> <span class="dv">0</span>) <span class="sc">+</span> <span class="fu">rnorm</span>(n, <span class="dv">0</span>, <span class="fl">0.1</span>)</span>
+<span id="cb13-46"><a href="#cb13-46" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>out2[df<span class="sc">$</span>out2 <span class="sc">&gt;</span> <span class="dv">90</span>] <span class="ot">&lt;-</span> <span class="dv">90</span></span>
+<span id="cb13-47"><a href="#cb13-47" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>out2 <span class="ot">&lt;-</span> <span class="fu">round</span>(df<span class="sc">$</span>out2, <span class="dv">1</span>)</span>
+<span id="cb13-48"><a href="#cb13-48" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-49"><a href="#cb13-49" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (makehist2) {</span>
+<span id="cb13-50"><a href="#cb13-50" aria-hidden="true" tabindex="-1"></a>    <span class="fu">hist</span>(df<span class="sc">$</span>out2[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">0</span>], <span class="at">breaks =</span> <span class="dv">90</span>, <span class="at">main =</span> <span class="st">"Control Arm DAOOH"</span>,</span>
+<span id="cb13-51"><a href="#cb13-51" aria-hidden="true" tabindex="-1"></a>         <span class="at">xlab =</span> <span class="st">"DAOOH (days)"</span>, <span class="at">xlim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">90</span>), <span class="at">col =</span> <span class="st">"lightblue"</span>)</span>
+<span id="cb13-52"><a href="#cb13-52" aria-hidden="true" tabindex="-1"></a>    <span class="fu">hist</span>(df<span class="sc">$</span>out2[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">1</span>], <span class="at">breaks =</span> <span class="dv">90</span>, <span class="at">main =</span> <span class="st">"Treatment Arm DAOOH"</span>,</span>
+<span id="cb13-53"><a href="#cb13-53" aria-hidden="true" tabindex="-1"></a>         <span class="at">xlab =</span> <span class="st">"DAOOH (days)"</span>, <span class="at">xlim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">90</span>), <span class="at">col =</span> <span class="st">"lightgreen"</span>)</span>
+<span id="cb13-54"><a href="#cb13-54" aria-hidden="true" tabindex="-1"></a>    <span class="fu">print</span>(<span class="fu">mean</span>(df<span class="sc">$</span>out2[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">1</span>]) <span class="sc">-</span> <span class="fu">mean</span>(df<span class="sc">$</span>out2[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">0</span>]))</span>
+<span id="cb13-55"><a href="#cb13-55" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb13-56"><a href="#cb13-56" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-57"><a href="#cb13-57" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Fit models for primary/secondary outcome and check power for</span></span>
+<span id="cb13-58"><a href="#cb13-58" aria-hidden="true" tabindex="-1"></a>  <span class="co"># superiority and non-inferiority respectively</span></span>
+<span id="cb13-59"><a href="#cb13-59" aria-hidden="true" tabindex="-1"></a>  mwtest <span class="ot">&lt;-</span> <span class="fu">wilcox.test</span>(df<span class="sc">$</span>out1[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">1</span>], df<span class="sc">$</span>out1[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">0</span>],</span>
+<span id="cb13-60"><a href="#cb13-60" aria-hidden="true" tabindex="-1"></a>                        <span class="at">alternative =</span> <span class="st">"greater"</span>)<span class="sc">$</span>p.value</span>
+<span id="cb13-61"><a href="#cb13-61" aria-hidden="true" tabindex="-1"></a>  mwtest2 <span class="ot">&lt;-</span> <span class="fu">wilcox.test</span>(df<span class="sc">$</span>out2[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">1</span>], df<span class="sc">$</span>out2[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">0</span>],</span>
+<span id="cb13-62"><a href="#cb13-62" aria-hidden="true" tabindex="-1"></a>                        <span class="at">alternative =</span> <span class="st">"greater"</span>, <span class="at">mu =</span> <span class="sc">-</span><span class="fl">0.5</span>)<span class="sc">$</span>p.value</span>
+<span id="cb13-63"><a href="#cb13-63" aria-hidden="true" tabindex="-1"></a>  mwtest3 <span class="ot">&lt;-</span> <span class="fu">wilcox.test</span>(df<span class="sc">$</span>out2[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">1</span>], df<span class="sc">$</span>out2[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">0</span>],</span>
+<span id="cb13-64"><a href="#cb13-64" aria-hidden="true" tabindex="-1"></a>                        <span class="at">alternative =</span> <span class="st">"greater"</span>)<span class="sc">$</span>p.value</span>
+<span id="cb13-65"><a href="#cb13-65" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-66"><a href="#cb13-66" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(<span class="fu">c</span>(<span class="co">#mean(df$out1[df$trt == 1], na.rm = T) -</span></span>
+<span id="cb13-67"><a href="#cb13-67" aria-hidden="true" tabindex="-1"></a>             <span class="co">#mean(df$out1[df$trt == 0], na.rm = T),</span></span>
+<span id="cb13-68"><a href="#cb13-68" aria-hidden="true" tabindex="-1"></a>           <span class="co">#mean(df$out2[df$trt == 1], na.rm = T) -</span></span>
+<span id="cb13-69"><a href="#cb13-69" aria-hidden="true" tabindex="-1"></a>             <span class="co">#mean(df$out2[df$trt == 0], na.rm = T),</span></span>
+<span id="cb13-70"><a href="#cb13-70" aria-hidden="true" tabindex="-1"></a>           <span class="dv">1</span><span class="sc">*</span>(mwtest <span class="sc">&lt;</span> <span class="fl">0.05</span>),</span>
+<span id="cb13-71"><a href="#cb13-71" aria-hidden="true" tabindex="-1"></a>           <span class="dv">1</span><span class="sc">*</span>(mwtest2 <span class="sc">&lt;</span> <span class="fl">0.05</span>),</span>
+<span id="cb13-72"><a href="#cb13-72" aria-hidden="true" tabindex="-1"></a>           <span class="dv">1</span><span class="sc">*</span>(mwtest3 <span class="sc">&lt;</span> <span class="fl">0.05</span>)))</span>
+<span id="cb13-73"><a href="#cb13-73" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-74"><a href="#cb13-74" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb13-75"><a href="#cb13-75" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-76"><a href="#cb13-76" aria-hidden="true" tabindex="-1"></a><span class="co"># Simulation function to calculate power for treatment effect</span></span>
+<span id="cb13-77"><a href="#cb13-77" aria-hidden="true" tabindex="-1"></a><span class="co"># using linear mixed models fit to first trial</span></span>
+<span id="cb13-78"><a href="#cb13-78" aria-hidden="true" tabindex="-1"></a>simulate_trial2 <span class="ot">&lt;-</span> <span class="cf">function</span>(n, num_sites, trt_effect, trt_effect2,</span>
+<span id="cb13-79"><a href="#cb13-79" aria-hidden="true" tabindex="-1"></a>                            <span class="at">makehist =</span> <span class="cn">FALSE</span>, <span class="at">makehist2 =</span> <span class="cn">FALSE</span>) {</span>
+<span id="cb13-80"><a href="#cb13-80" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-81"><a href="#cb13-81" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Varying enrollment by site</span></span>
+<span id="cb13-82"><a href="#cb13-82" aria-hidden="true" tabindex="-1"></a>  prop_by_site <span class="ot">&lt;-</span> <span class="fu">rnorm2</span>(num_sites, <span class="dv">1</span><span class="sc">/</span>num_sites, <span class="fl">0.33</span><span class="sc">/</span>num_sites)[<span class="dv">1</span><span class="sc">:</span>num_sites, <span class="dv">1</span>]</span>
+<span id="cb13-83"><a href="#cb13-83" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Correct (rare) potential negative enrollment in a small site</span></span>
+<span id="cb13-84"><a href="#cb13-84" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">min</span>(prop_by_site) <span class="sc">&lt;</span> <span class="dv">0</span>) {</span>
+<span id="cb13-85"><a href="#cb13-85" aria-hidden="true" tabindex="-1"></a>    prop_by_site[<span class="fu">which.max</span>(prop_by_site)] <span class="ot">&lt;-</span> </span>
+<span id="cb13-86"><a href="#cb13-86" aria-hidden="true" tabindex="-1"></a>      prop_by_site[<span class="fu">which.max</span>(prop_by_site)] <span class="sc">+</span></span>
+<span id="cb13-87"><a href="#cb13-87" aria-hidden="true" tabindex="-1"></a>      prop_by_site[<span class="fu">which.min</span>(prop_by_site)] <span class="sc">-</span> <span class="fl">0.01</span></span>
+<span id="cb13-88"><a href="#cb13-88" aria-hidden="true" tabindex="-1"></a>    prop_by_site[<span class="fu">which.min</span>(prop_by_site)] <span class="ot">&lt;-</span> <span class="fl">0.01</span></span>
+<span id="cb13-89"><a href="#cb13-89" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb13-90"><a href="#cb13-90" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-91"><a href="#cb13-91" aria-hidden="true" tabindex="-1"></a>  site <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span><span class="sc">:</span>num_sites, <span class="fu">round</span>(prop_by_site<span class="sc">*</span>n))</span>
+<span id="cb13-92"><a href="#cb13-92" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">length</span>(site) <span class="sc">&lt;</span> n) {</span>
+<span id="cb13-93"><a href="#cb13-93" aria-hidden="true" tabindex="-1"></a>    site <span class="ot">&lt;-</span> <span class="fu">c</span>(site, <span class="fu">rep</span>(num_sites, n <span class="sc">-</span> <span class="fu">length</span>(site)))</span>
+<span id="cb13-94"><a href="#cb13-94" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> <span class="cf">if</span> (<span class="fu">length</span>(site) <span class="sc">&gt;</span> n) {</span>
+<span id="cb13-95"><a href="#cb13-95" aria-hidden="true" tabindex="-1"></a>    site <span class="ot">&lt;-</span> site[<span class="sc">-</span>(<span class="dv">1</span><span class="sc">:</span>(<span class="fu">length</span>(site) <span class="sc">-</span> n))]</span>
+<span id="cb13-96"><a href="#cb13-96" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb13-97"><a href="#cb13-97" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-98"><a href="#cb13-98" aria-hidden="true" tabindex="-1"></a>  trt <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(n, <span class="dv">1</span>, <span class="fl">0.5</span>)</span>
+<span id="cb13-99"><a href="#cb13-99" aria-hidden="true" tabindex="-1"></a>  df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(site, trt)</span>
+<span id="cb13-100"><a href="#cb13-100" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-101"><a href="#cb13-101" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Simulate primary outcome data based on SSU-1 model fit (Gaussian)</span></span>
+<span id="cb13-102"><a href="#cb13-102" aria-hidden="true" tabindex="-1"></a>  alpha1 <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(num_sites, <span class="dv">0</span>, sd_random1)</span>
+<span id="cb13-103"><a href="#cb13-103" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>out1 <span class="ot">&lt;-</span> model_intercept1 <span class="sc">+</span> trt_effect<span class="sc">*</span>df<span class="sc">$</span>trt <span class="sc">+</span></span>
+<span id="cb13-104"><a href="#cb13-104" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rep</span>(alpha1, <span class="fu">table</span>(df<span class="sc">$</span>site)) <span class="sc">+</span> <span class="fu">rnorm</span>(n, <span class="dv">0</span>, sd_residual1)</span>
+<span id="cb13-105"><a href="#cb13-105" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>out1[df<span class="sc">$</span>out1 <span class="sc">&gt;</span> <span class="dv">30</span>] <span class="ot">&lt;-</span> <span class="dv">30</span></span>
+<span id="cb13-106"><a href="#cb13-106" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>mort1 <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(n, <span class="dv">1</span>, mort30)</span>
+<span id="cb13-107"><a href="#cb13-107" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>out1[df<span class="sc">$</span>mort1 <span class="sc">==</span> <span class="dv">1</span>] <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb13-108"><a href="#cb13-108" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>out1 <span class="ot">&lt;-</span> <span class="fu">round</span>(df<span class="sc">$</span>out1, <span class="dv">1</span>)</span>
+<span id="cb13-109"><a href="#cb13-109" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-110"><a href="#cb13-110" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (makehist) {</span>
+<span id="cb13-111"><a href="#cb13-111" aria-hidden="true" tabindex="-1"></a>    <span class="fu">hist</span>(df<span class="sc">$</span>out1[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">0</span>], <span class="at">breaks =</span> <span class="dv">30</span>, <span class="at">main =</span> <span class="st">"Control Arm DAOOH"</span>,</span>
+<span id="cb13-112"><a href="#cb13-112" aria-hidden="true" tabindex="-1"></a>         <span class="at">xlab =</span> <span class="st">"DAOOH (days)"</span>, <span class="at">xlim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">30</span>), <span class="at">col =</span> <span class="st">"lightblue"</span>)</span>
+<span id="cb13-113"><a href="#cb13-113" aria-hidden="true" tabindex="-1"></a>    <span class="fu">hist</span>(df<span class="sc">$</span>out1[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">1</span>], <span class="at">breaks =</span> <span class="dv">30</span>, <span class="at">main =</span> <span class="st">"Treatment Arm DAOOH"</span>,</span>
+<span id="cb13-114"><a href="#cb13-114" aria-hidden="true" tabindex="-1"></a>         <span class="at">xlab =</span> <span class="st">"DAOOH (days)"</span>, <span class="at">xlim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">30</span>), <span class="at">col =</span> <span class="st">"lightgreen"</span>)</span>
+<span id="cb13-115"><a href="#cb13-115" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb13-116"><a href="#cb13-116" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-117"><a href="#cb13-117" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Simulate secondary outcome data based on SSU-1 model fit (Gaussian)</span></span>
+<span id="cb13-118"><a href="#cb13-118" aria-hidden="true" tabindex="-1"></a>  alpha2 <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(num_sites, <span class="dv">0</span>, sd_random2)</span>
+<span id="cb13-119"><a href="#cb13-119" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>out2 <span class="ot">&lt;-</span> model_intercept2 <span class="sc">+</span> trt_effect2<span class="sc">*</span>df<span class="sc">$</span>trt <span class="sc">+</span> <span class="fu">rep</span>(alpha2, <span class="fu">table</span>(df<span class="sc">$</span>site)) <span class="sc">+</span> <span class="fu">rnorm</span>(n, <span class="dv">0</span>, sd_residual2)</span>
+<span id="cb13-120"><a href="#cb13-120" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>out2[df<span class="sc">$</span>out2 <span class="sc">&gt;</span> <span class="dv">90</span>] <span class="ot">&lt;-</span> <span class="dv">90</span></span>
+<span id="cb13-121"><a href="#cb13-121" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>mort2 <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(n, <span class="dv">1</span>, mort90)</span>
+<span id="cb13-122"><a href="#cb13-122" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>out2[df<span class="sc">$</span>mort2 <span class="sc">==</span> <span class="dv">1</span>] <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb13-123"><a href="#cb13-123" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>out2 <span class="ot">&lt;-</span> <span class="fu">round</span>(df<span class="sc">$</span>out2, <span class="dv">1</span>)</span>
+<span id="cb13-124"><a href="#cb13-124" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-125"><a href="#cb13-125" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (makehist2) {</span>
+<span id="cb13-126"><a href="#cb13-126" aria-hidden="true" tabindex="-1"></a>    <span class="fu">hist</span>(df<span class="sc">$</span>out2[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">0</span>], <span class="at">breaks =</span> <span class="dv">90</span>, <span class="at">main =</span> <span class="st">"Control Arm DAOOH"</span>,</span>
+<span id="cb13-127"><a href="#cb13-127" aria-hidden="true" tabindex="-1"></a>         <span class="at">xlab =</span> <span class="st">"DAOOH (days)"</span>, <span class="at">xlim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">90</span>), <span class="at">col =</span> <span class="st">"lightblue"</span>)</span>
+<span id="cb13-128"><a href="#cb13-128" aria-hidden="true" tabindex="-1"></a>    <span class="fu">hist</span>(df<span class="sc">$</span>out2[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">1</span>], <span class="at">breaks =</span> <span class="dv">90</span>, <span class="at">main =</span> <span class="st">"Treatment Arm DAOOH"</span>,</span>
+<span id="cb13-129"><a href="#cb13-129" aria-hidden="true" tabindex="-1"></a>         <span class="at">xlab =</span> <span class="st">"DAOOH (days)"</span>, <span class="at">xlim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">90</span>), <span class="at">col =</span> <span class="st">"lightgreen"</span>)</span>
+<span id="cb13-130"><a href="#cb13-130" aria-hidden="true" tabindex="-1"></a>    <span class="fu">print</span>(<span class="fu">mean</span>(df<span class="sc">$</span>out2[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">1</span>]) <span class="sc">-</span> <span class="fu">mean</span>(df<span class="sc">$</span>out2[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">0</span>]))</span>
+<span id="cb13-131"><a href="#cb13-131" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb13-132"><a href="#cb13-132" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-133"><a href="#cb13-133" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Simulate complete at random dropout</span></span>
+<span id="cb13-134"><a href="#cb13-134" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>out1[<span class="fu">rbinom</span>(n, <span class="dv">1</span>, <span class="fl">0.1</span>)] <span class="ot">&lt;-</span> <span class="cn">NA</span></span>
+<span id="cb13-135"><a href="#cb13-135" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>out2[<span class="fu">rbinom</span>(n, <span class="dv">1</span>, <span class="fl">0.15</span>)] <span class="ot">&lt;-</span> <span class="cn">NA</span></span>
+<span id="cb13-136"><a href="#cb13-136" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-137"><a href="#cb13-137" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Fit models for primary/secondary outcome and check power for</span></span>
+<span id="cb13-138"><a href="#cb13-138" aria-hidden="true" tabindex="-1"></a>  <span class="co"># superiority and non-inferiority respectively</span></span>
+<span id="cb13-139"><a href="#cb13-139" aria-hidden="true" tabindex="-1"></a>  mwtest <span class="ot">&lt;-</span> <span class="fu">wilcox.test</span>(df<span class="sc">$</span>out1[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">1</span>], df<span class="sc">$</span>out1[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">0</span>],</span>
+<span id="cb13-140"><a href="#cb13-140" aria-hidden="true" tabindex="-1"></a>                        <span class="at">alternative =</span> <span class="st">"greater"</span>)<span class="sc">$</span>p.value</span>
+<span id="cb13-141"><a href="#cb13-141" aria-hidden="true" tabindex="-1"></a>  mwtest2 <span class="ot">&lt;-</span> <span class="fu">wilcox.test</span>(df<span class="sc">$</span>out2[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">1</span>], df<span class="sc">$</span>out2[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">0</span>],</span>
+<span id="cb13-142"><a href="#cb13-142" aria-hidden="true" tabindex="-1"></a>                        <span class="at">alternative =</span> <span class="st">"greater"</span>, <span class="at">mu =</span> <span class="sc">-</span><span class="fl">0.5</span>)<span class="sc">$</span>p.value</span>
+<span id="cb13-143"><a href="#cb13-143" aria-hidden="true" tabindex="-1"></a>  mwtest3 <span class="ot">&lt;-</span> <span class="fu">wilcox.test</span>(df<span class="sc">$</span>out2[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">1</span>], df<span class="sc">$</span>out2[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">0</span>],</span>
+<span id="cb13-144"><a href="#cb13-144" aria-hidden="true" tabindex="-1"></a>                        <span class="at">alternative =</span> <span class="st">"greater"</span>)<span class="sc">$</span>p.value</span>
+<span id="cb13-145"><a href="#cb13-145" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-146"><a href="#cb13-146" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(<span class="fu">c</span>(<span class="co">#mean(df$out1[df$trt == 1], na.rm = T) -</span></span>
+<span id="cb13-147"><a href="#cb13-147" aria-hidden="true" tabindex="-1"></a>             <span class="co">#mean(df$out1[df$trt == 0], na.rm = T),</span></span>
+<span id="cb13-148"><a href="#cb13-148" aria-hidden="true" tabindex="-1"></a>           <span class="co">#mean(df$out2[df$trt == 1], na.rm = T) -</span></span>
+<span id="cb13-149"><a href="#cb13-149" aria-hidden="true" tabindex="-1"></a>             <span class="co">#mean(df$out2[df$trt == 0], na.rm = T),</span></span>
+<span id="cb13-150"><a href="#cb13-150" aria-hidden="true" tabindex="-1"></a>           <span class="dv">1</span><span class="sc">*</span>(mwtest <span class="sc">&lt;</span> <span class="fl">0.05</span>),</span>
+<span id="cb13-151"><a href="#cb13-151" aria-hidden="true" tabindex="-1"></a>           <span class="dv">1</span><span class="sc">*</span>(mwtest2 <span class="sc">&lt;</span> <span class="fl">0.05</span>),</span>
+<span id="cb13-152"><a href="#cb13-152" aria-hidden="true" tabindex="-1"></a>           <span class="dv">1</span><span class="sc">*</span>(mwtest3 <span class="sc">&lt;</span> <span class="fl">0.05</span>)))</span>
+<span id="cb13-153"><a href="#cb13-153" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-154"><a href="#cb13-154" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Now we run 1000 simulations across sample sizes of interest to assess power for each outcome and simulation approach. By default the second approach is not plotted, but can be included by uncommenting the relevant lines.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Run 1000 simulations for 14 sites and 850 to 1250 sample size</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">825</span>)</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>sample_sizes <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">850</span>, <span class="dv">950</span>, <span class="dv">1050</span>, <span class="dv">1150</span>, <span class="dv">1250</span>)</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Uncomment extra rows if wanting to run the second approach</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Find parameters that correspond to treatment effects of interest</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a><span class="co">#trt_beta &lt;- find_beta(14, 1)</span></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a><span class="co">#trt_beta2 &lt;- find_beta2(14, 1)</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>trt_gamma <span class="ot">&lt;-</span> <span class="fu">find_gamma</span>(<span class="dv">14</span>, <span class="dv">1</span>)</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>trt_gamma2 <span class="ot">&lt;-</span> <span class="fu">find_gamma2</span>(<span class="dv">14</span>, <span class="dv">1</span>)</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>power_matsample1 <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="cn">NA</span>, <span class="fu">length</span>(sample_sizes))</span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>power_matsample2 <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="cn">NA</span>, <span class="fu">length</span>(sample_sizes))</span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>power_matsample3 <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="cn">NA</span>, <span class="fu">length</span>(sample_sizes))</span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>power_mat1 <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="cn">NA</span>, <span class="fu">length</span>(sample_sizes))</span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>power_mat2 <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="cn">NA</span>, <span class="fu">length</span>(sample_sizes))</span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>power_mat3 <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="cn">NA</span>, <span class="fu">length</span>(sample_sizes))</span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>nsims <span class="ot">&lt;-</span> <span class="dv">100</span></span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(sample_sizes)) {</span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Simulate using sampling with replacement</span></span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a>  simresults <span class="ot">&lt;-</span> <span class="fu">replicate</span>(nsims,</span>
+<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a>                          <span class="fu">simulate_trial</span>(sample_sizes[i],</span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a>                                         <span class="dv">14</span>, trt_gamma, trt_gamma2))</span>
+<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a>  power_matsample1[i] <span class="ot">&lt;-</span> <span class="fu">mean</span>(simresults[<span class="dv">1</span>, ], <span class="at">na.rm =</span> T)</span>
+<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a>  power_matsample2[i] <span class="ot">&lt;-</span> <span class="fu">mean</span>(simresults[<span class="dv">2</span>, ], <span class="at">na.rm =</span> T)</span>
+<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a>  power_matsample3[i] <span class="ot">&lt;-</span> <span class="fu">mean</span>(simresults[<span class="dv">3</span>, ], <span class="at">na.rm =</span> T)</span>
+<span id="cb14-30"><a href="#cb14-30" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb14-31"><a href="#cb14-31" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Simulate using linear mixed models</span></span>
+<span id="cb14-32"><a href="#cb14-32" aria-hidden="true" tabindex="-1"></a>  <span class="co">#simresults2 &lt;- replicate(nsims,</span></span>
+<span id="cb14-33"><a href="#cb14-33" aria-hidden="true" tabindex="-1"></a>                           <span class="co">#simulate_trial2(sample_sizes[i],</span></span>
+<span id="cb14-34"><a href="#cb14-34" aria-hidden="true" tabindex="-1"></a>                                         <span class="co">#14, trt_beta, trt_beta2))</span></span>
+<span id="cb14-35"><a href="#cb14-35" aria-hidden="true" tabindex="-1"></a>  <span class="co">#power_mat1[i] &lt;- mean(simresults2[1, ], na.rm = T)</span></span>
+<span id="cb14-36"><a href="#cb14-36" aria-hidden="true" tabindex="-1"></a>  <span class="co">#power_mat2[i] &lt;- mean(simresults2[2, ], na.rm = T)</span></span>
+<span id="cb14-37"><a href="#cb14-37" aria-hidden="true" tabindex="-1"></a>  <span class="co">#power_mat3[i] &lt;- mean(simresults2[3, ], na.rm = T)</span></span>
+<span id="cb14-38"><a href="#cb14-38" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb14-39"><a href="#cb14-39" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb14-40"><a href="#cb14-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-41"><a href="#cb14-41" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot power by sample size using one or both approaches</span></span>
+<span id="cb14-42"><a href="#cb14-42" aria-hidden="true" tabindex="-1"></a>df_plot <span class="ot">&lt;-</span></span>
+<span id="cb14-43"><a href="#cb14-43" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data.frame</span>(<span class="st">"Power_Primary"</span> <span class="ot">=</span> <span class="fu">c</span>(power_mat1, power_matsample1),</span>
+<span id="cb14-44"><a href="#cb14-44" aria-hidden="true" tabindex="-1"></a>             <span class="st">"Power_Secondary_Noninf"</span> <span class="ot">=</span> <span class="fu">c</span>(power_mat2, power_matsample2),</span>
+<span id="cb14-45"><a href="#cb14-45" aria-hidden="true" tabindex="-1"></a>             <span class="st">"Power_Secondary_Sup"</span> <span class="ot">=</span> <span class="fu">c</span>(power_mat3, power_matsample3),</span>
+<span id="cb14-46"><a href="#cb14-46" aria-hidden="true" tabindex="-1"></a>             <span class="st">"Sample_Size"</span> <span class="ot">=</span> <span class="fu">rep</span>(sample_sizes, <span class="dv">2</span>),</span>
+<span id="cb14-47"><a href="#cb14-47" aria-hidden="true" tabindex="-1"></a>             <span class="st">"Approach"</span> <span class="ot">=</span> <span class="fu">rep</span>(<span class="fu">c</span>(<span class="st">"Linear Mixed Model"</span>,</span>
+<span id="cb14-48"><a href="#cb14-48" aria-hidden="true" tabindex="-1"></a>                                <span class="st">"Sampling with Replacement"</span>),</span>
+<span id="cb14-49"><a href="#cb14-49" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">each =</span> <span class="fu">length</span>(sample_sizes)))</span>
+<span id="cb14-50"><a href="#cb14-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-51"><a href="#cb14-51" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(df_plot, <span class="fu">aes</span>(<span class="at">x =</span> Sample_Size, <span class="at">y =</span> Power_Primary,</span>
+<span id="cb14-52"><a href="#cb14-52" aria-hidden="true" tabindex="-1"></a>                    <span class="at">col =</span> Approach)) <span class="sc">+</span></span>
+<span id="cb14-53"><a href="#cb14-53" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span> </span>
+<span id="cb14-54"><a href="#cb14-54" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>() <span class="sc">+</span></span>
+<span id="cb14-55"><a href="#cb14-55" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylim</span>(<span class="fl">0.5</span>, <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb14-56"><a href="#cb14-56" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">"Sample Size"</span>) <span class="sc">+</span></span>
+<span id="cb14-57"><a href="#cb14-57" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="st">"Power"</span>) <span class="sc">+</span></span>
+<span id="cb14-58"><a href="#cb14-58" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggtitle</span>(<span class="st">"Power for primary outcome"</span>) <span class="sc">+</span></span>
+<span id="cb14-59"><a href="#cb14-59" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="SSU2_sample_size_updated_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(df_plot, <span class="fu">aes</span>(<span class="at">x =</span> Sample_Size, <span class="at">y =</span> Power_Secondary_Noninf,</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>                    <span class="at">col =</span> Approach)) <span class="sc">+</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span> </span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>() <span class="sc">+</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylim</span>(<span class="fl">0.5</span>, <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">"Sample Size"</span>) <span class="sc">+</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="st">"Power"</span>) <span class="sc">+</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggtitle</span>(<span class="st">"Power for secondary outcome"</span>) <span class="sc">+</span></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="SSU2_sample_size_updated_files/figure-html/unnamed-chunk-4-2.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Exploratory plot for superiority on secondary outcome</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(df_plot, <span class="fu">aes</span>(<span class="at">x =</span> Sample_Size, <span class="at">y =</span> Power_Secondary_Sup,</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>                    <span class="at">col =</span> Approach)) <span class="sc">+</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span> </span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>() <span class="sc">+</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylim</span>(<span class="fl">0.3</span>, <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggtitle</span>(<span class="st">"Power for secondary outcome"</span>) <span class="sc">+</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="SSU2_sample_size_updated_files/figure-html/unnamed-chunk-4-3.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</section>
+<section id="heterogeneity-of-treatment-effect-hte" class="level2">
+<h2 class="anchored" data-anchor-id="heterogeneity-of-treatment-effect-hte">Heterogeneity of Treatment Effect (HTE)</h2>
+<p>Now we add an additional simulation function to study HTE across a binary covariate, followed by another simulation study to calculate power in this setting. We used the linear model approach described above, which is more straightforward for studying effect modification than the sampling approach (and likely more conservative).</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Function to find beta coefficient for linear model under HTE</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="co"># (outcome is truncated when simulating from linear, shifting trt effect)</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>find_beta_hte <span class="ot">&lt;-</span> <span class="cf">function</span>(num_sites, trt_effect, cov_prob, cov_effect) {</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  n <span class="ot">&lt;-</span> <span class="fl">5e4</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>  prop_by_site <span class="ot">&lt;-</span> <span class="fu">rnorm2</span>(num_sites, <span class="dv">1</span><span class="sc">/</span>num_sites, <span class="fl">0.33</span><span class="sc">/</span>num_sites)[<span class="dv">1</span><span class="sc">:</span>num_sites, <span class="dv">1</span>]</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>  site <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span><span class="sc">:</span>num_sites, <span class="fu">round</span>(prop_by_site<span class="sc">*</span>n))</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">length</span>(site) <span class="sc">&lt;</span> n) {</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>    site <span class="ot">&lt;-</span> <span class="fu">c</span>(site, <span class="fu">rep</span>(num_sites, n <span class="sc">-</span> <span class="fu">length</span>(site)))</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> <span class="cf">if</span> (<span class="fu">length</span>(site) <span class="sc">&gt;</span> n) {</span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>    site <span class="ot">&lt;-</span> site[<span class="sc">-</span>(<span class="dv">1</span><span class="sc">:</span>(<span class="fu">length</span>(site) <span class="sc">-</span> n))]</span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>  trt <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(n, <span class="dv">1</span>, <span class="fl">0.5</span>)</span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>  df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(site, trt)</span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>covar <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(n, <span class="dv">1</span>, cov_prob)</span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>  alpha0 <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(num_sites, <span class="dv">0</span>, sd_random1)</span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a>  beta_list <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="fl">0.5</span>, <span class="fl">1.5</span>, <span class="at">by =</span> <span class="fl">0.04</span>)<span class="sc">*</span>trt_effect</span>
+<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a>  effect_sizes <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="cn">NA</span>, <span class="fu">length</span>(beta_list))</span>
+<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(beta_list)) {</span>
+<span id="cb17-21"><a href="#cb17-21" aria-hidden="true" tabindex="-1"></a>    df<span class="sc">$</span>out <span class="ot">&lt;-</span> model_intercept1 <span class="sc">+</span> beta_list[i]<span class="sc">*</span>df<span class="sc">$</span>trt <span class="sc">-</span></span>
+<span id="cb17-22"><a href="#cb17-22" aria-hidden="true" tabindex="-1"></a>      cov_effect<span class="sc">*</span>df<span class="sc">$</span>covar<span class="sc">*</span>(<span class="dv">1</span><span class="sc">-</span>df<span class="sc">$</span>trt) <span class="sc">+</span> cov_effect<span class="sc">*</span>df<span class="sc">$</span>trt<span class="sc">*</span>df<span class="sc">$</span>covar <span class="sc">+</span></span>
+<span id="cb17-23"><a href="#cb17-23" aria-hidden="true" tabindex="-1"></a>      <span class="fu">rep</span>(alpha0, <span class="fu">table</span>(df<span class="sc">$</span>site)) <span class="sc">+</span> <span class="fu">rnorm</span>(n, <span class="dv">0</span>, sd_residual1)</span>
+<span id="cb17-24"><a href="#cb17-24" aria-hidden="true" tabindex="-1"></a>    df<span class="sc">$</span>out[df<span class="sc">$</span>out <span class="sc">&gt;</span> <span class="dv">30</span>] <span class="ot">&lt;-</span> <span class="dv">30</span></span>
+<span id="cb17-25"><a href="#cb17-25" aria-hidden="true" tabindex="-1"></a>    outmod <span class="ot">&lt;-</span> <span class="fu">lmer</span>(out <span class="sc">~</span> trt<span class="sc">*</span>covar <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> site), <span class="at">data =</span> df)</span>
+<span id="cb17-26"><a href="#cb17-26" aria-hidden="true" tabindex="-1"></a>    effect_sizes[i] <span class="ot">&lt;-</span> <span class="fu">summary</span>(outmod)<span class="sc">$</span>coefficients[<span class="dv">2</span>, <span class="dv">1</span>]</span>
+<span id="cb17-27"><a href="#cb17-27" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb17-28"><a href="#cb17-28" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb17-29"><a href="#cb17-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(beta_list[<span class="fu">which.min</span>(<span class="fu">abs</span>(effect_sizes <span class="sc">-</span> trt_effect))])</span>
+<span id="cb17-30"><a href="#cb17-30" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb17-31"><a href="#cb17-31" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb17-32"><a href="#cb17-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-33"><a href="#cb17-33" aria-hidden="true" tabindex="-1"></a><span class="co"># Simulation function to calculate power for treatment effect</span></span>
+<span id="cb17-34"><a href="#cb17-34" aria-hidden="true" tabindex="-1"></a>simulate_trial_hte <span class="ot">&lt;-</span> <span class="cf">function</span>(n, num_sites, trt_effect,</span>
+<span id="cb17-35"><a href="#cb17-35" aria-hidden="true" tabindex="-1"></a>                               cov_prob, cov_effect) {</span>
+<span id="cb17-36"><a href="#cb17-36" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb17-37"><a href="#cb17-37" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Varying enrollment by site</span></span>
+<span id="cb17-38"><a href="#cb17-38" aria-hidden="true" tabindex="-1"></a>  prop_by_site <span class="ot">&lt;-</span> <span class="fu">rnorm2</span>(num_sites, <span class="dv">1</span><span class="sc">/</span>num_sites, <span class="fl">0.33</span><span class="sc">/</span>num_sites)[<span class="dv">1</span><span class="sc">:</span>num_sites, <span class="dv">1</span>]</span>
+<span id="cb17-39"><a href="#cb17-39" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Correct (rare) potential negative enrollment in a small site</span></span>
+<span id="cb17-40"><a href="#cb17-40" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">min</span>(prop_by_site) <span class="sc">&lt;</span> <span class="dv">0</span>) {</span>
+<span id="cb17-41"><a href="#cb17-41" aria-hidden="true" tabindex="-1"></a>    prop_by_site[<span class="fu">which.max</span>(prop_by_site)] <span class="ot">&lt;-</span> </span>
+<span id="cb17-42"><a href="#cb17-42" aria-hidden="true" tabindex="-1"></a>      prop_by_site[<span class="fu">which.max</span>(prop_by_site)] <span class="sc">+</span></span>
+<span id="cb17-43"><a href="#cb17-43" aria-hidden="true" tabindex="-1"></a>      prop_by_site[<span class="fu">which.min</span>(prop_by_site)] <span class="sc">-</span> <span class="fl">0.01</span></span>
+<span id="cb17-44"><a href="#cb17-44" aria-hidden="true" tabindex="-1"></a>    prop_by_site[<span class="fu">which.min</span>(prop_by_site)] <span class="ot">&lt;-</span> <span class="fl">0.01</span></span>
+<span id="cb17-45"><a href="#cb17-45" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb17-46"><a href="#cb17-46" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb17-47"><a href="#cb17-47" aria-hidden="true" tabindex="-1"></a>  site <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span><span class="sc">:</span>num_sites, <span class="fu">round</span>(prop_by_site<span class="sc">*</span>n))</span>
+<span id="cb17-48"><a href="#cb17-48" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">length</span>(site) <span class="sc">&lt;</span> n) {</span>
+<span id="cb17-49"><a href="#cb17-49" aria-hidden="true" tabindex="-1"></a>    site <span class="ot">&lt;-</span> <span class="fu">c</span>(site, <span class="fu">rep</span>(num_sites, n <span class="sc">-</span> <span class="fu">length</span>(site)))</span>
+<span id="cb17-50"><a href="#cb17-50" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> <span class="cf">if</span> (<span class="fu">length</span>(site) <span class="sc">&gt;</span> n) {</span>
+<span id="cb17-51"><a href="#cb17-51" aria-hidden="true" tabindex="-1"></a>    site <span class="ot">&lt;-</span> site[<span class="sc">-</span>(<span class="dv">1</span><span class="sc">:</span>(<span class="fu">length</span>(site) <span class="sc">-</span> n))]</span>
+<span id="cb17-52"><a href="#cb17-52" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb17-53"><a href="#cb17-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-54"><a href="#cb17-54" aria-hidden="true" tabindex="-1"></a>  trt <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(n, <span class="dv">1</span>, <span class="fl">0.5</span>)</span>
+<span id="cb17-55"><a href="#cb17-55" aria-hidden="true" tabindex="-1"></a>  df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(site, trt)</span>
+<span id="cb17-56"><a href="#cb17-56" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>covar <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(n, <span class="dv">1</span>, cov_prob)</span>
+<span id="cb17-57"><a href="#cb17-57" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb17-58"><a href="#cb17-58" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Simulate primary outcome data based on SSU-1 model fit (Gaussian)</span></span>
+<span id="cb17-59"><a href="#cb17-59" aria-hidden="true" tabindex="-1"></a>  alpha1 <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(num_sites, <span class="dv">0</span>, sd_random1)</span>
+<span id="cb17-60"><a href="#cb17-60" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>out1 <span class="ot">&lt;-</span> model_intercept1 <span class="sc">+</span> trt_effect<span class="sc">*</span>df<span class="sc">$</span>trt <span class="sc">-</span></span>
+<span id="cb17-61"><a href="#cb17-61" aria-hidden="true" tabindex="-1"></a>    cov_effect<span class="sc">*</span>df<span class="sc">$</span>covar<span class="sc">*</span>(<span class="dv">1</span><span class="sc">-</span>df<span class="sc">$</span>trt) <span class="sc">+</span> cov_effect<span class="sc">*</span>df<span class="sc">$</span>trt<span class="sc">*</span>df<span class="sc">$</span>covar <span class="sc">+</span></span>
+<span id="cb17-62"><a href="#cb17-62" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rep</span>(alpha1, <span class="fu">table</span>(df<span class="sc">$</span>site)) <span class="sc">+</span> <span class="fu">rnorm</span>(n, <span class="dv">0</span>, sd_residual1)</span>
+<span id="cb17-63"><a href="#cb17-63" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>out1[df<span class="sc">$</span>out1 <span class="sc">&gt;</span> <span class="dv">30</span>] <span class="ot">&lt;-</span> <span class="dv">30</span></span>
+<span id="cb17-64"><a href="#cb17-64" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>mort1 <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(n, <span class="dv">1</span>, mort30)</span>
+<span id="cb17-65"><a href="#cb17-65" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>out1[df<span class="sc">$</span>mort1 <span class="sc">==</span> <span class="dv">1</span>] <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb17-66"><a href="#cb17-66" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>out1 <span class="ot">&lt;-</span> <span class="fu">round</span>(df<span class="sc">$</span>out1, <span class="dv">1</span>)</span>
+<span id="cb17-67"><a href="#cb17-67" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb17-68"><a href="#cb17-68" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Simulate complete at random dropout</span></span>
+<span id="cb17-69"><a href="#cb17-69" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>out1[<span class="fu">rbinom</span>(n, <span class="dv">1</span>, <span class="fl">0.1</span>)] <span class="ot">&lt;-</span> <span class="cn">NA</span></span>
+<span id="cb17-70"><a href="#cb17-70" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-71"><a href="#cb17-71" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Fit model for primary outcome and check power for interaction</span></span>
+<span id="cb17-72"><a href="#cb17-72" aria-hidden="true" tabindex="-1"></a>  outmod1 <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(<span class="fu">clmm2</span>(<span class="fu">as.factor</span>(out1) <span class="sc">~</span> <span class="co">#as.factor(trt),</span></span>
+<span id="cb17-73"><a href="#cb17-73" aria-hidden="true" tabindex="-1"></a>                            <span class="fu">as.factor</span>(trt)<span class="sc">*</span>covar,</span>
+<span id="cb17-74"><a href="#cb17-74" aria-hidden="true" tabindex="-1"></a>                   <span class="at">random =</span> <span class="fu">as.factor</span>(site), <span class="at">Hess =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb17-75"><a href="#cb17-75" aria-hidden="true" tabindex="-1"></a>                   <span class="at">threshold =</span> <span class="st">"equidistant"</span>,</span>
+<span id="cb17-76"><a href="#cb17-76" aria-hidden="true" tabindex="-1"></a>                   <span class="at">data =</span> df[<span class="sc">!</span><span class="fu">is.na</span>(df<span class="sc">$</span>out1), ]), <span class="at">error =</span> <span class="cf">function</span>(e) e)</span>
+<span id="cb17-77"><a href="#cb17-77" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb17-78"><a href="#cb17-78" aria-hidden="true" tabindex="-1"></a>  subgroupdiff <span class="ot">&lt;-</span> <span class="fu">mean</span>(df<span class="sc">$</span>out1[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">1</span> <span class="sc">&amp;</span> df<span class="sc">$</span>covar <span class="sc">==</span> <span class="dv">1</span>], <span class="at">na.rm =</span> T) <span class="sc">-</span></span>
+<span id="cb17-79"><a href="#cb17-79" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mean</span>(df<span class="sc">$</span>out1[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">0</span> <span class="sc">&amp;</span> df<span class="sc">$</span>covar <span class="sc">==</span> <span class="dv">1</span>], <span class="at">na.rm =</span> T) <span class="sc">-</span></span>
+<span id="cb17-80"><a href="#cb17-80" aria-hidden="true" tabindex="-1"></a>    (<span class="fu">mean</span>(df<span class="sc">$</span>out1[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">1</span> <span class="sc">&amp;</span> df<span class="sc">$</span>covar <span class="sc">==</span> <span class="dv">0</span>], <span class="at">na.rm =</span> T) <span class="sc">-</span></span>
+<span id="cb17-81"><a href="#cb17-81" aria-hidden="true" tabindex="-1"></a>       <span class="fu">mean</span>(df<span class="sc">$</span>out1[df<span class="sc">$</span>trt <span class="sc">==</span> <span class="dv">0</span> <span class="sc">&amp;</span> df<span class="sc">$</span>covar <span class="sc">==</span> <span class="dv">0</span>], <span class="at">na.rm =</span> T))</span>
+<span id="cb17-82"><a href="#cb17-82" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb17-83"><a href="#cb17-83" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">class</span>(outmod1)[<span class="dv">2</span>] <span class="sc">==</span> <span class="st">"error"</span>) {</span>
+<span id="cb17-84"><a href="#cb17-84" aria-hidden="true" tabindex="-1"></a>    <span class="fu">return</span>(<span class="fu">c</span>(<span class="cn">NA</span>))</span>
+<span id="cb17-85"><a href="#cb17-85" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span>{</span>
+<span id="cb17-86"><a href="#cb17-86" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-87"><a href="#cb17-87" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(<span class="fu">c</span>(<span class="dv">1</span><span class="sc">*</span>(<span class="fu">summary</span>(outmod1)<span class="sc">$</span>coefficients[<span class="dv">5</span>, <span class="dv">4</span>] <span class="sc">&lt;</span> <span class="fl">0.05</span>),</span>
+<span id="cb17-88"><a href="#cb17-88" aria-hidden="true" tabindex="-1"></a>           subgroupdiff))</span>
+<span id="cb17-89"><a href="#cb17-89" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb17-90"><a href="#cb17-90" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb17-91"><a href="#cb17-91" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Power analysis for HTE:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Run 1000 simulations for 14 sites and 850 to 1250 sample size</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1234</span>)</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>sample_sizes <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">850</span>, <span class="dv">1050</span>, <span class="dv">1250</span>)</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>hte_coef <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="fl">0.7</span>, <span class="fl">1.1</span>, <span class="at">by =</span> <span class="fl">0.1</span>)</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>power_mat_hte <span class="ot">&lt;-</span> <span class="fu">array</span>(<span class="cn">NA</span>, <span class="fu">c</span>(<span class="fu">length</span>(sample_sizes), <span class="fu">length</span>(hte_coef)))</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>subgroup_diff_mat <span class="ot">&lt;-</span> <span class="fu">array</span>(<span class="cn">NA</span>, <span class="fu">c</span>(<span class="fu">length</span>(sample_sizes), <span class="fu">length</span>(hte_coef)))</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>nsims <span class="ot">&lt;-</span> <span class="dv">500</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span>(j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(hte_coef)) {</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>  trt_beta <span class="ot">&lt;-</span> <span class="fu">find_beta_hte</span>(<span class="dv">14</span>, <span class="dv">1</span>, <span class="fl">0.6</span>, hte_coef[j])</span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(sample_sizes)) {</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>    simresults <span class="ot">&lt;-</span> <span class="fu">replicate</span>(nsims,</span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>                            <span class="fu">simulate_trial_hte</span>(sample_sizes[i],</span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>                                               <span class="dv">14</span>, trt_beta, <span class="fl">0.6</span>,</span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>                                               hte_coef[j]))</span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>    power_mat_hte[i, j] <span class="ot">&lt;-</span> <span class="fu">mean</span>(simresults[<span class="dv">1</span>, ], <span class="at">na.rm =</span> T)</span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>    subgroup_diff_mat[i, j] <span class="ot">&lt;-</span> <span class="fu">mean</span>(simresults[<span class="dv">2</span>, ], <span class="at">na.rm =</span> T)</span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot power by sample size and number of periods</span></span>
+<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a>df_plot <span class="ot">&lt;-</span></span>
+<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data.frame</span>(<span class="st">"Power_Int"</span> <span class="ot">=</span> <span class="fu">c</span>(power_mat_hte),</span>
+<span id="cb18-26"><a href="#cb18-26" aria-hidden="true" tabindex="-1"></a>             <span class="st">"Sample_Size"</span> <span class="ot">=</span> <span class="fu">rep</span>(sample_sizes, <span class="fu">length</span>(hte_coef)),</span>
+<span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a>             <span class="st">"HTE_Diff"</span> <span class="ot">=</span> <span class="fu">rep</span>(<span class="fu">round</span>(<span class="fu">colMeans</span>(subgroup_diff_mat), <span class="dv">1</span>),</span>
+<span id="cb18-28"><a href="#cb18-28" aria-hidden="true" tabindex="-1"></a>                              <span class="at">each =</span> <span class="fu">length</span>(sample_sizes)))</span>
+<span id="cb18-29"><a href="#cb18-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-30"><a href="#cb18-30" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(df_plot, <span class="fu">aes</span>(<span class="at">x =</span> HTE_Diff, <span class="at">y =</span> Power_Int,</span>
+<span id="cb18-31"><a href="#cb18-31" aria-hidden="true" tabindex="-1"></a>                    <span class="at">group =</span> <span class="fu">factor</span>(Sample_Size),</span>
+<span id="cb18-32"><a href="#cb18-32" aria-hidden="true" tabindex="-1"></a>                    <span class="at">colour =</span> <span class="fu">factor</span>(Sample_Size))) <span class="sc">+</span></span>
+<span id="cb18-33"><a href="#cb18-33" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span> </span>
+<span id="cb18-34"><a href="#cb18-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>() <span class="sc">+</span></span>
+<span id="cb18-35"><a href="#cb18-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="st">"Difference in effect across subgroups (days)"</span>) <span class="sc">+</span></span>
+<span id="cb18-36"><a href="#cb18-36" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="st">"Power"</span>) <span class="sc">+</span></span>
+<span id="cb18-37"><a href="#cb18-37" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Change legend title</span></span>
+<span id="cb18-38"><a href="#cb18-38" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_discrete</span>(<span class="at">name =</span> <span class="st">"Sample Size"</span>) <span class="sc">+</span></span>
+<span id="cb18-39"><a href="#cb18-39" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggtitle</span>(<span class="st">"Power for interaction"</span>) <span class="sc">+</span></span>
+<span id="cb18-40"><a href="#cb18-40" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="SSU2_sample_size_updated_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
